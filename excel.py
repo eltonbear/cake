@@ -19,10 +19,9 @@ def readSheet(filePath):
 	emptyRowList = sheet.row[emptyRow]
 	if not all(isinstance(e, str) for e in emptyRowList):
 		return{'error': 'File format incorrect: ' + filePath}
-	spaceString = ""
-	for empty in emptyRowList:
-		spaceString = spaceString + empty
-
+	spaceString = ''.join(emptyRowList)
+	# for empty in emptyRowList:
+	# 	spaceString = spaceString + empty
 	if type(spaceString) is not str or spaceString.strip() != '':
 		return{'error': 'File format incorrect: ' + filePath}
 
@@ -31,7 +30,6 @@ def readSheet(filePath):
 		productName = productionInfo
 		del sheet.row[emptyRow]
 		del sheet.row[productInfoR]
-		print(sheet.row[0])
 
 		dataDictionary = sheet.to_dict()
 
@@ -51,11 +49,6 @@ def readSheet(filePath):
 		return dataDictionary
 	else:
 		return {'error': missing}
-
-# a = readSheet(r"C:\/Users\eltoshon\Desktop\pico_top_expanded.csv")
-a = readSheet("C:/Users/eltoshon/Desktop/pico_top_expanded.xlsx")
-# b = readSheet("C:/Users/eltoshon/Desktop/TTTTTTTest_instruction.xlsm")
-# print(a['error'])
 
 
 
