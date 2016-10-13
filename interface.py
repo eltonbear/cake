@@ -43,6 +43,17 @@ class cakeApp(Tk):
 	def getPaths(self):
 		return {frameName: frame.getPath() for frameName, frame in self.frames.items()}
 
+	def popErrorMessage(self, message):
+		"""Show error message in a pop up window.
+
+			Parameters
+			----------
+			message: string
+				An error message.
+		"""
+
+		messagebox.showinfo("Warning", message, parent = self)
+
 class browse(Frame):
 
 	def __init__(self, parent, controller, nextFrame = None, prevFrame = None, message = None):
@@ -113,10 +124,10 @@ class browse(Frame):
 		self.filePath = self.filePathEntry.get()
 		# When entry is empty						
 		if self.filePath == '':
-			self.emptyFileNameWarning()
+			self.controller.popErrorMessage('Please select a file or folder!')
 		# When file path is invaild meaning not a legit file
 		elif not exists(self.filePath):
-			self.incorrectFileNameWarning()
+			self.controller.popErrorMessage('Path does not exist!')
 		else:
 			self.controller.showFrame(self.nextFrame)
 
@@ -128,28 +139,6 @@ class browse(Frame):
 	def getPath(self):
 
 		return self.filePath
-
-	def incorrectFileNameWarning(self):
-		"""Warning when file path is incorrect(file does not exist)."""
-
-		messagebox.showinfo('Warning', 'File does not exist!', parent = self.parent)
-
-	def emptyFileNameWarning(self):
-		"""Warning when file path entry is empty but ok is clicked."""
-
-		messagebox.showinfo('Warning', 'No files selected!', parent = self.parent)
-
-	def popErrorMessage(self, message):
-		"""Show error message in a pop up window.
-
-			Parameters
-			----------
-			message: string
-				An error message.
-		"""
-
-		messagebox.showinfo("Warning", message, parent = self.parent)
-
 
 class browseSheet(browse):
 
@@ -227,7 +216,7 @@ class saveXML(browse):
 		self.filePath = self.filePathEntry.get()
 		# When entry is empty						
 		if self.filePath == '':
-			self.emptyFileNameWarning()
+			self.controller.popErrorMessage('Please input file path!')
 		else:
 			self.controller.closeWindow()
 
