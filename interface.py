@@ -9,7 +9,7 @@ class cakeApp(Tk):
 		Tk.__init__(self, *args, **kwargs)
 		Tk.wm_title(self, "MRSI Cake")
 		container = Frame(self)
-		container.pack(side="top", fill="both", expand=True)######### ???
+		container.pack(side="top", fill="both", expand=True)
 		container.grid_rowconfigure(0, weight=1)            
 		container.grid_columnconfigure(0, weight=1)
 
