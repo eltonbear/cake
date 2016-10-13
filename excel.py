@@ -1,5 +1,4 @@
 import pyexcel as pe
-import warnings
 
 def readSheet(filePath):
 	titleRow = 1
