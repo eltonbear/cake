@@ -3,16 +3,53 @@ from tkinter.filedialog import askopenfilename, askdirectory, asksaveasfilename
 from tkinter import messagebox
 from os.path import exists
 
+class cakeApp(Tk):
+
+	def __init__(self, *args, **kwargs):
+		Tk.__init__(self, *args, **kwargs)
+		Tk.wm_title(self, "MRSI Cake")
+		container = Frame(self)
+		container.pack(side="top", fill="both", expand=True)######### ???
+		container.grid_rowconfigure(0, weight=1)            
+		container.grid_columnconfigure(0, weight=1)
+
+		self.frames = {}
+		for frameClass in (browseSheet, browseFolder, saveXML):
+			pageName = frameClass.__name__
+			frame = frameClass(parent = container, controller = self)
+			self.frames[pageName] = frame
+
+			# put all of the pages in the same location;
+			# the one on the top of the stacking order
+			# will be the one that is visible.
+
+		self.showFrame("browseSheet")
+
+	def showFrame(self, pageName):
+		'''Show a frame for the given page name'''
+
+		frame = self.frames[pageName]
+		frame.tkraise()
+
+	def closeWindow(self):
+		'''Close the window.'''
+
+		self.destroy()
+
 class browse(Frame):
 
-	def __init__(self, root):
+	def __init__(self, parent, controller, nextFrame = None, prevFrame = None, message = None):
 		"""Create a browse interface."""
 
 		# Create a main frame
-		Frame.__init__(self, root, width = 1000)
-		self.root = root		# Window for interface
+		Frame.__init__(self, parent, width = 1000)
+		self.parent = parent		# Window for interface
+		self.controller = controller
 		self.filePath = ""			# Final file path
 		self.filePathEntry = None	# File path in browse entry
+		self.nextFrame = nextFrame
+		self.prevFrame = prevFrame
+		self.message = message
 		# Create GUI
 		self.initGUI()
 
@@ -20,75 +57,76 @@ class browse(Frame):
 		"""Create GUI including buttons and path entry."""
 
 		# Set main frame's location 
-		self.pack(fill = BOTH, expand = True)
+		self.grid(row=0, column=0, sticky="nsew")
+
 		# Set path entry frame and its location
 		self.entryFrame = Frame(self, relief = RAISED, borderwidth = 1)
-		self.entryFrame.pack(fill = BOTH, expand = True)
+		self.entryFrame.pack(fill = BOTH, expand = False)
+		# Make label
+		if self.message:
+			messageLabel = Label(self.entryFrame, text = self.message, font=("Bradley", 10))
+			messageLabel.pack(anchor=W,  padx=0, pady=0)
+
 		# Set path entry and its location
 		self.filePathEntry = Entry(self.entryFrame, bd = 4, width = 50)
-		self.filePathEntry.grid(row = 0, column = 2, columnspan = 5, padx=2, pady=2)
+		self.filePathEntry.pack(side = LEFT,  padx=2, pady=1)
 
-	def makeButtons(self, getFilePath, buttonInfo):
+
+	def makeButtons(self, buttonInfo):
 		"""Create buttons."""
+		lowerButtonPadx = 4
+		lowerButtonPady = 3
+		buttonBD = 3
 
 		# Set browse button and location
-		bBrowse = Button(self.entryFrame, text = 'Browse', width = 10, command = getFilePath)	
-		bBrowse.grid(row = 0, column = 1, padx=3, pady=3)
+		bBrowse = Button(self.entryFrame, text = 'Browse', width = 10, borderwidth = buttonBD, command = self.getFilePathToEntry)	
+		bBrowse.pack(side = LEFT, padx=4, pady=2)
+
+		bCancel = Button(self, text = 'Cancel', width = 10, borderwidth = buttonBD, command = self.controller.closeWindow)	
+		bCancel = bCancel.pack(side = RIGHT, anchor = S, padx=lowerButtonPadx, pady=lowerButtonPady)
 		for button in buttonInfo:
 			# Set cancel button and location
-			b = Button(self, text = button['text'], width = button['width'], command = button['function'])
-			b.pack(side = RIGHT, padx=4, pady=2)
+			b = Button(self, text = button['text'], width = button['width'], borderwidth = buttonBD, command = button['function'])
+			b.pack(side = RIGHT, anchor = S, padx=lowerButtonPadx, pady=lowerButtonPady)
 
-	# def getFilePath(self):
-	# 	"""Get file Path from file path entry."""
+	def getFilePathToEntry(self):
+		"""Get file Path to file path entry."""
 
-	# 	self.filePath = askopenfilename(filetypes = (fileType, ("All files", "*.*")), parent = self.root)
-		
-	# 	fileType1 = ("Excel Workbook", "*.xlsx")
-	# 	fileType2 = ("Excel Macro-Enabled Workbook", "*.xlsm")
-	# 	self.filePath = askopenfilename(filetypes = (fileType2, fileType1, ("All files", "*.*")), parent = self.root)
+		path = askopenfilename(filetypes = ("All files", "*.*"), parent = self.parent)
 
-	# 	# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
-	# 	self.filePathEntry.delete(0, 'end')
-	# 	self.filePathEntry.insert(0, self.filePath)
+		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
+		if path != '':
+			self.filePathEntry.delete(0, 'end')
+			self.filePathEntry.insert(0, path)
 
-	def checkAndGetPath(self):
-		"""A set of instructions are ran when ok button is clicked. 
-	
-		"""
+	def GetEntrypathAndNextPage(self):
+		"""A set of instructions are ran when ok button is clicked."""
 
 		# Get a file path from browe entry
 		self.filePath = self.filePathEntry.get()
 		# When entry is empty						
-		if self.filePath == "":
+		if self.filePath == '':
 			self.emptyFileNameWarning()
-			return False
 		# When file path is invaild meaning not a legit file
 		elif not exists(self.filePath):
 			self.incorrectFileNameWarning()
-			return False
-		return True
-
-	def closeWindow(self):
-		"""Close the toplevel window."""
-
-		self.root.destroy()
+		else:
+			self.controller.showFrame(self.nextFrame)
 
 	def back(self):
-		"""Go back to the first interface."""
+		"""Go back to the previous frame (page)."""
 
-		# Close the current window and unhide the first interface
-
+		self.controller.showFrame(self.prevFrame)
 
 	def incorrectFileNameWarning(self):
 		"""Warning when file path is incorrect(file does not exist)."""
 
-		messagebox.showinfo("Warning", "File does not exist!", parent = self.root)
+		messagebox.showinfo('Warning', 'File does not exist!', parent = self.parent)
 
 	def emptyFileNameWarning(self):
 		"""Warning when file path entry is empty but ok is clicked."""
 
-		messagebox.showinfo("Warning", "No files selected!", parent = self.root)
+		messagebox.showinfo('Warning', 'No files selected!', parent = self.parent)
 
 	def popErrorMessage(self, message):
 		"""Show error message in a pop up window.
@@ -99,103 +137,89 @@ class browse(Frame):
 				An error message.
 		"""
 
-		messagebox.showinfo("Warning", message, parent = self.root)
+		messagebox.showinfo("Warning", message, parent = self.parent)
 
 
 class browseSheet(browse):
 
-	def __init__(self, root):
-		browse.__init__(self, root)
-		self.nextFrame = None
-		# b = browseFolder(root)
-		# c = saveXML(root)
+	def __init__(self, parent, controller):
+		message = 'Select an Excelsheet'
+		browse.__init__(self,
+		 parent, controller, 'browseFolder', message = message)
 
 	def initGUI(self):
 		super().initGUI()
-		button = [{'text': 'Cancel', 'width': 10, 'function': self.closeWindow}, {'text': 'Next', 'width': 7, 'function': self.toBrowseFolder}]
-		self.makeButtons(self.getFilePath, button)
+		button = [{'text': 'Next', 'width': 7, 'function': self.GetEntrypathAndNextPage}]
+		self.makeButtons(button)
 
-	def getFilePath(self):
+	def getFilePathToEntry(self):
 		fileType1 = ("Comma Delimited CSV", "*.CSV")
 		fileType2 = ("Excel Workbook", "*.xlsx")
 		fileType3 = ("Excel Macro-Enabled Workbook", "*.xlsm")
 		fileType4 = ("All files", "*.*")
-		
-		self.filePath = askopenfilename(filetypes = (fileType1, fileType2, fileType3, fileType4), parent = self.root)
+
+		path = askopenfilename(filetypes = (fileType1, fileType2, fileType3, fileType4), parent = self.parent)
 
 		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
-		self.filePathEntry.delete(0, 'end')
-		self.filePathEntry.insert(0, self.filePath)
-
-	def toBrowseFolder(self):
-		if self.checkAndGetPath():
-			self.lower()
-			b = browseFolder(self.root)
-			b.lift()
+		if path != '':
+			self.filePathEntry.delete(0, 'end')
+			self.filePathEntry.insert(0, path)
 
 class browseFolder(browse):
 
-	def __init__(self, root):
-		browse.__init__(self, root)
-		self.nextFrame = None
+	def __init__(self, parent, controller):
+		message = 'Select a die folder'
+		browse.__init__(self, parent, controller, 'saveXML', 'browseSheet', message)
 
 	def initGUI(self):
 		super().initGUI()
-		button = [{'text': 'Cancel', 'width': 10, 'function': self.closeWindow}, {'text': 'Next', 'width': 7, 'function': self.toSaveXML}, {'text': 'Back', 'width': 7, 'function': self.back}]
-		self.makeButtons(self.getFilePath, button)
+		buttons = [{'text': 'Next', 'width': 7, 'function': self.GetEntrypathAndNextPage}, {'text': 'Back', 'width': 7, 'function': self.back}]
+		self.makeButtons(buttons)
 
-	def getFilePath(self):
+	def getFilePathToEntry(self):
 		
-		self.filePath = askdirectory(parent = self.root)
-		print(self.filePath)
+		path = askdirectory(parent = self.parent)
 
 		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
-		self.filePathEntry.delete(0, 'end')
-		self.filePathEntry.insert(0, self.filePath)
-
-	def toSaveXML(self):
-		self.checkAndGetPath()
+		if path != '':
+			self.filePathEntry.delete(0, 'end')
+			self.filePathEntry.insert(0, path)
 
 class saveXML(browse):
 
-	def __init__(self, root):
-		browse.__init__(self, root)
-		self.nextFrame = None
+	def __init__(self, parent, controller):
+		message = 'Save XML file'
+		browse.__init__(self, parent, controller, prevFrame = 'browseFolder', message = message)
 
 	def initGUI(self):
 		super().initGUI()
-		button = [{'text': 'Cancel', 'width': 10, 'function': self.closeWindow}, {'text': 'Save', 'width': 7, 'function': self.save}, {'text': 'Back', 'width': 7, 'function': self.back}]
-		self.makeButtons(self.getFilePath, button)
+		self.checkVar = IntVar()
+		bCheck = Checkbutton(self, text = "Open XML", variable = self.checkVar, onvalue = 1, offvalue = 0, borderwidth = 2)
+		bCheck.pack(side = LEFT, anchor=S, padx=6, pady=4)
+		buttons = [{'text': 'Save', 'width': 7, 'function': self.save}, {'text': 'Back', 'width': 7, 'function': self.back}]
+		self.makeButtons(buttons)
 
-	def getFilePath(self):
+	def getFilePathToEntry(self):
 		fileType1 = ("XML Data", "*.xml")
 		fileType2 = ("Text", "*.txt")
 		fileType3 = ("All files", "*.*")
 
-		self.filePath = asksaveasfilename(defaultextension= '.xml', filetypes = (fileType1, fileType2, fileType3), parent = self.root)
-		print(self.filePath)
+		path = asksaveasfilename(defaultextension= '.xml', filetypes = (fileType1, fileType2, fileType3), parent = self.parent)
 
 		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
-		self.filePathEntry.delete(0, 'end')
-		self.filePathEntry.insert(0, self.filePath)
+		if path != '':
+			self.filePathEntry.delete(0, 'end')
+			self.filePathEntry.insert(0, path)
 
 	def save(self):
-		print(self.filePath)
+		# Get a file path from browe entry
+		self.filePath = self.filePathEntry.get()
+		# When entry is empty						
+		if self.filePath == '':
+			self.emptyFileNameWarning()
+		else:
+			self.controller.closeWindow()
 
-
-
-
-
-
-
-
-
-window = Tk()
-window.title("CAKE")
-# Create a first object
-# a = browseSheet(window)
-# a.lift
-# b = browseFolder(window)
-c = saveXML(window)
-# Launch
-window.mainloop()
+if __name__ == "__main__":
+    app = cakeApp()
+    app.mainloop()
