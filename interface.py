@@ -25,6 +25,10 @@ class cakeApp(Tk):
 
 		self.showFrame("browseSheet")
 
+	def getFrame(self, frameName):
+
+		return self.frames[frameName]
+
 	def showFrame(self, pageName):
 		'''Show a frame for the given page name'''
 
@@ -35,6 +39,9 @@ class cakeApp(Tk):
 		'''Close the window.'''
 
 		self.destroy()
+
+	def getPaths(self):
+		return {frameName: frame.getPath() for frameName, frame in self.frames.items()}
 
 class browse(Frame):
 
@@ -117,6 +124,10 @@ class browse(Frame):
 		"""Go back to the previous frame (page)."""
 
 		self.controller.showFrame(self.prevFrame)
+
+	def getPath(self):
+
+		return self.filePath
 
 	def incorrectFileNameWarning(self):
 		"""Warning when file path is incorrect(file does not exist)."""
@@ -220,6 +231,11 @@ class saveXML(browse):
 		else:
 			self.controller.closeWindow()
 
+	def getCheckBoxVal(self):
+		return self.checkVar.get()
+
 if __name__ == "__main__":
     app = cakeApp()
     app.mainloop()
+    paths = app.getPaths()
+    print(paths)
