@@ -1,20 +1,19 @@
 from xml.etree.ElementTree import ElementTree, Element, SubElement
-from os import startfile
 
-def writeXml(version, name, numOfParts):
+def writeXml(version, excelData, XMLpath):
 	firstPartIndex = 2
 	root = Element('Rec_SubstrateRecord')
 	versionElement = SubElement(root, 'Version')
 	versionElement.text = version
 	alignmentNameElement = SubElement(root, 'AlignmentName')
 	alignmentNameElement.text = name
+	numOfParts = 
 	for index in range(0, numOfParts):
 		part = writePart()
 		root.insert(index + firstPartIndex, part)
 
 	tree = ElementTree(root)
-	tree.write('testhaha.xml')
-	startfile('testhaha.xml')
+	tree.write(XMLpath)
 
 def writePart():
 	partElement = Element('Rec_SubstratePlacement')
