@@ -6,8 +6,9 @@ def writeXml(version, excelData, XMLpath):
 	versionElement = SubElement(root, 'Version')
 	versionElement.text = version
 	alignmentNameElement = SubElement(root, 'AlignmentName')
-	alignmentNameElement.text = name
-	numOfParts = 
+	alignmentNameElement.text = excelData['productName']
+	parts = excelData['data']
+	numOfParts = len(parts)
 	for index in range(0, numOfParts):
 		part = writePart()
 		root.insert(index + firstPartIndex, part)
