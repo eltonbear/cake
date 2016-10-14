@@ -226,5 +226,4 @@ class saveXML(browse):
 if __name__ == "__main__":
     app = cakeApp()
     app.mainloop()
-    paths = app.getPaths()
-    print(paths)
+ 
