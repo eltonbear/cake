@@ -13,42 +13,42 @@ def readSheet(filePath):
 	productInfoC = 0
 	productInfoR = 0
 	emptyRow = 1
-	titles = ['Ref Des', 'Part Number', 'X-location', 'Y-location', 'Rotation', 'x']
-	
+	requireTitles = ['Ref Des', 'Part Number', 'X-location', 'Y-location', 'Rotation']
+	sheet.colnames = list(map(str.strip, sheet.colnames))
+	titles = sheet.colnames
 	emptyRowList = sheet.row[emptyRow]
+	missingColumns = []
+
+	# Check if require columns all exist
+	for requireTitle in requireTitles:
+		if requireTitle not in titles:
+			missingColumns.append(requireTitle)
+	if missingColumns:	
+		return{'error': 'File missing column of "' + ','.join(missingColumns) + '"!'}
+	# Check if the empty row is a list of strings
 	if not all(isinstance(e, str) for e in emptyRowList):
 		return{'error': 'File format incorrect: ' + filePath}
+	# Check if there an empty at row 2
 	spaceString = ''.join(emptyRowList)
-	# for empty in emptyRowList:
-	# 	spaceString = spaceString + empty
 	if type(spaceString) is not str or spaceString.strip() != '':
 		return{'error': 'File format incorrect: ' + filePath}
 
 	try:
 		productionInfo = sheet.row[productInfoR][productInfoC].split( )
-		productName = productionInfo
+		productName = productionInfo[0]
 		del sheet.row[emptyRow]
 		del sheet.row[productInfoR]
-
-		dataDictionary = sheet.to_dict()
-
-		keys = list(dataDictionary.keys())
-		for key in keys:
-			if key[0] == ' ' or key[-1] == ' ':
-				dataDictionary[key.strip()] = dataDictionary.pop(key)
+		print(sheet.colnames)
+		dataDictionary = sheet.to_records()
 	except:
 		return {'error': 'File format incorrect: ' + filePath}
 
-	missing = []
-	for title in titles:
-		if title not in dataDictionary:
-			missing.append(title)
+	return {'productName': productName, 'data': dataDictionary}
 
-	if missing:
-		return dataDictionary
-	else:
-		return {'error': missing}
-
+if __name__ == "__main__":
+    data = readSheet(r'C:\Users\eltoshon\Desktop\pico_top_expanded.csv')
+    print(data['productName'])
+    print(data['data'][0:2])
 
 
 
