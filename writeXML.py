@@ -1,17 +1,16 @@
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
 def writeXml(version, excelData, XMLpath):
-	firstPartIndex = 2
+	partIndex = 2
 	root = Element('Rec_SubstrateRecord')
 	versionElement = SubElement(root, 'Version')
 	versionElement.text = version
 	alignmentNameElement = SubElement(root, 'AlignmentName')
 	alignmentNameElement.text = excelData['productName']
 	parts = excelData['data']
-	numOfParts = len(parts)
-	for index in range(0, numOfParts):
-		part = writePart()
-		root.insert(index + firstPartIndex, part)
+	for part in parts:
+		partElement = writePart()
+		root.insert(partIndex, partElement)
 
 	tree = ElementTree(root)
 	tree.write(XMLpath)
