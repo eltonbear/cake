@@ -1,3 +1,4 @@
+import os
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
@@ -10,20 +11,36 @@ def writeXml(version, excelData, XMLpath, dieFolderPath):
 	alignmentNameElement = SubElement(root, 'AlignmentName')
 	alignmentNameElement.text = productName
 	parts = excelData['data']
+	dieFileList = os.listdir(dieFolderPath)
+	dieToCameraNum = {}
 	for part in parts:
 		dieName = part['Part Number'].replace('-', '') + productName[-3:]
-		partElement = writePart(part)
+		if dieName not in dieToCameraNum:
+			fileNamesWanted = [dieName + '.xml', dieName + '.txt']
+			camNum = '-1'
+			for name in fileNamesWanted: # usually iterates 2 times
+				if name in dieFileList:
+					camNum = getCameraNum(dieFolderPath + '/' + name)
+					dieToCameraNum{dieName: camNum}
+					if not camNum.isdigit(): # if camNum is str, then there is error in getCameraNum
+						return camNum
+					break
+			if camNum == '-1': # if camNum is still '-1', then the wanted die file is not in the folder
+				return 'Missing die file for die: ' + dieName
+		partElement = writePart(part, dieToCameraNum[dieName])
 		root.insert(partIndex, partElement)
+		##### MAYBE PUT LOCAL ALIGNMENT HERE
 
 	tree = ElementTree(root)
 	tree.write(XMLpath)
+	return ''
 
-def writePart(partInfo):
+def writePart(partInfo, cameraNbr):
 	partElement = Element('Rec_SubstratePlacement')
 	enableElment = SubElement(partElement, 'Enabled')
 	enableElment.text = '1'
 	cameraNbrElement = SubElement(partElement, 'CameraNbr')
-	cameraNbrElement.text = '1'
+	cameraNbrElement.text = cameraNbr
 	pxElement = SubElement(partElement, 'PlacementCoords-X')
 	pxElement.text = partInfo['X-location']
 	pyElement = SubElement(partElement, 'PlacementCoords-Y')
@@ -48,8 +65,6 @@ def writePart(partInfo):
 	airPuffTimerElement.text = '0'
 
 	return partElement
-def getFileNameInFolder(directory):
-	print('in progress')
 
 def getCameraNum(filePath):
 	try:
