@@ -26,7 +26,7 @@ def writeXml(version, excelData, XMLpath, dieFolderPath):
 						return camNum
 					break
 			if camNum == '-1': # if camNum is still '-1', then the wanted die file is not in the folder
-				return 'Missing die file for die: ' + dieName
+				return 'Missing die file for die: ' + dieName ###### are there supposed to be all die files i need?
 		partElement = writePart(part, dieToCameraNum[dieName])
 		root.insert(partIndex, partElement)
 		##### MAYBE PUT LOCAL ALIGNMENT HERE
