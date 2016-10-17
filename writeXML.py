@@ -18,28 +18,30 @@ def writeXml(version, excelData, XMLpath, dieFolderPath):
 	errorInFile = []
 	error = False
 	for part in parts:
-		dieName = part['Part Number'].replace('-', '') + productName[-4:]
-		if dieName not in dieToCameraNum:
-			fileNamesWanted = [dieName + '.xml', dieName + '.txt']
-			if name not in dieFileList: # if name not in list, then the wanted die file is not in the folder
-				missingDieFile.append(dieName)
-				error = True
-				return 'Missing die file for die: ' + dieName ###### are there supposed to be all die files i need?
-			else:
-				for name in fileNamesWanted: # usually iterates 2 times
-					xmlPath = dieFolderPath + '/' + name
-					if os.path.isfile(xmlPath)
-						camNum = getCameraNum(xmlPath)
-						if not camNum.isdigit(): # if camNum is str, then there is error in getCameraNum
-							errorInFile.append(camNum)
-							error = True
-						else:
-							dieToCameraNum{dieName: camNum}
-						break
-		if not error:
-			partElement = writePart(part, dieName, dieToCameraNum[dieName])
-			root.insert(partIndex, partElement)
-		##### MAYBE PUT LOCAL ALIGNMENT HERE
+		if part['Ref Des']:
+			dieName = part['Part Number'].replace('-', '') + '_' + productName[-4:]
+			if dieName not in dieToCameraNum:
+				fileName = ''
+				if dieName + '.XML' in dieFileList:
+					fileName = dieName + '.XML'
+				elif dieName + 'txt' in dieFileList:
+					fileName = dieName + '.txt'
+				else:
+					missingDieFile.append(dieName)
+					error = True
+					###### are there supposed to be all die files i need?
+				if fileName:
+					xmlPath = dieFolderPath + '/' + fileName
+					camNum = getCameraNum(xmlPath)
+					if camNum.isdigit(): # if camNum is str, then there is error in getCameraNum
+						dieToCameraNum[dieName] = camNum					
+					else:
+						errorInFile.append(camNum)
+						error = True
+			if not error:
+				partElement = writePart(part, dieName, dieToCameraNum[dieName])
+				root.insert(partIndex, partElement)
+			##### MAYBE PUT LOCAL ALIGNMENT HERE
 	if error:
 		return {'missingDie': missingDieFile, 'error': errorInFile}
 	else:
@@ -54,11 +56,11 @@ def writePart(partInfo, dieName, cameraNbr):
 	cameraNbrElement = SubElement(partElement, 'CameraNbr')
 	cameraNbrElement.text = cameraNbr
 	pxElement = SubElement(partElement, 'PlacementCoords-X')
-	pxElement.text = partInfo['X-location']
+	pxElement.text = str(partInfo['X-location'])
 	pyElement = SubElement(partElement, 'PlacementCoords-Y')
-	pyElement.text = partInfo['Y-location']
+	pyElement.text = str(partInfo['Y-location'])
 	pAngleElement = SubElement(partElement, 'PlacementAngle')
-	pAngleElement.text = partInfo['Rotation']
+	pAngleElement.text = str(partInfo['Rotation'])
 	dieNameElement = SubElement(partElement, 'DieName')
 	dieNameElement.text = dieName
 	cameraHeightElement = SubElement(partElement, 'CameraHeight')
