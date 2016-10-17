@@ -1,4 +1,5 @@
 import os
+import os.path
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
@@ -13,29 +14,40 @@ def writeXml(version, excelData, XMLpath, dieFolderPath):
 	parts = excelData['data']
 	dieFileList = os.listdir(dieFolderPath)
 	dieToCameraNum = {}
+	missingDieFile = []
+	errorInFile = []
+	error = False
 	for part in parts:
-		dieName = part['Part Number'].replace('-', '') + productName[-3:]
+		dieName = part['Part Number'].replace('-', '') + productName[-4:]
 		if dieName not in dieToCameraNum:
 			fileNamesWanted = [dieName + '.xml', dieName + '.txt']
-			camNum = '-1'
-			for name in fileNamesWanted: # usually iterates 2 times
-				if name in dieFileList:
-					camNum = getCameraNum(dieFolderPath + '/' + name)
-					dieToCameraNum{dieName: camNum}
-					if not camNum.isdigit(): # if camNum is str, then there is error in getCameraNum
-						return camNum
-					break
-			if camNum == '-1': # if camNum is still '-1', then the wanted die file is not in the folder
+			if name not in dieFileList: # if name not in list, then the wanted die file is not in the folder
+				missingDieFile.append(dieName)
+				error = True
 				return 'Missing die file for die: ' + dieName ###### are there supposed to be all die files i need?
-		partElement = writePart(part, dieToCameraNum[dieName])
-		root.insert(partIndex, partElement)
+			else:
+				for name in fileNamesWanted: # usually iterates 2 times
+					xmlPath = dieFolderPath + '/' + name
+					if os.path.isfile(xmlPath)
+						camNum = getCameraNum(xmlPath)
+						if not camNum.isdigit(): # if camNum is str, then there is error in getCameraNum
+							errorInFile.append(camNum)
+							error = True
+						else:
+							dieToCameraNum{dieName: camNum}
+						break
+		if not error:
+			partElement = writePart(part, dieName, dieToCameraNum[dieName])
+			root.insert(partIndex, partElement)
 		##### MAYBE PUT LOCAL ALIGNMENT HERE
+	if error:
+		return {'missingDie': missingDieFile, 'error': errorInFile}
+	else:
+		tree = ElementTree(root)
+		tree.write(XMLpath)
+		return {}
 
-	tree = ElementTree(root)
-	tree.write(XMLpath)
-	return ''
-
-def writePart(partInfo, cameraNbr):
+def writePart(partInfo, dieName, cameraNbr):
 	partElement = Element('Rec_SubstratePlacement')
 	enableElment = SubElement(partElement, 'Enabled')
 	enableElment.text = '1'
@@ -48,7 +60,7 @@ def writePart(partInfo, cameraNbr):
 	pAngleElement = SubElement(partElement, 'PlacementAngle')
 	pAngleElement.text = partInfo['Rotation']
 	dieNameElement = SubElement(partElement, 'DieName')
-	dieNameElement.text = partInfo['Part Number']
+	dieNameElement.text = dieName
 	cameraHeightElement = SubElement(partElement, 'CameraHeight')
 	cameraHeightElement.text = '0'
 	pForceElement = SubElement(partElement, 'PlacementForce')
