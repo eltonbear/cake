@@ -94,11 +94,6 @@ def getCameraNum(filePath):
 	else:
 		return 'No camera number in file: ' + filePath
 
-a = getCameraNum(r'C:\Users\eltoshon\Desktop\cakeXMLfile\1GG6400_7740.xml')
-# b = getCameraNum(r'C:\Users\eltoshon\Desktop\cakeXMLfile\1GG6400_7740corrupt.xml')
-
-print(a)
-
 
 
 
