@@ -3,7 +3,7 @@ import os.path
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
-def writeXml(version, excelData, XMLpath, dieFolderPath):
+def writeXml(version, excelData,dieFolderPath, XMLpath):
 	partIndex = 2
 	root = Element('Rec_SubstrateRecord')
 	versionElement = SubElement(root, 'Version')

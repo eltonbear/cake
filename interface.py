@@ -37,11 +37,19 @@ class cakeApp(Tk):
 
 	def closeWindow(self):
 		'''Close the window.'''
-
+		self.isCancelled = True
 		self.destroy()
 
+	def toContinue(self):
+		return all([frame.toContinue() for frame in self.frames.values()])
+
 	def getPaths(self):
+		print(self.frames['saveXML'].getPath())
 		return {frameName: frame.getPath() for frameName, frame in self.frames.items()}
+
+	def ifOpenXML(self):
+
+		return self.getFrame('saveXML').getCheckBoxVal()
 
 	def popErrorMessage(self, message):
 		"""Show error message in a pop up window.
@@ -54,6 +62,12 @@ class cakeApp(Tk):
 
 		messagebox.showinfo("Warning", message, parent = self)
 
+	def errorMessageWindow(self, message):
+		window = Tk()
+		errorMessage(window, message)
+		window.mainloop()
+
+
 class browse(Frame):
 
 	def __init__(self, parent, controller, nextFrame = None, prevFrame = None, message = None):
@@ -65,6 +79,7 @@ class browse(Frame):
 		self.controller = controller
 		self.filePath = ""			# Final file path
 		self.filePathEntry = None	# File path in browse entry
+		self.isCancelled = False
 		self.nextFrame = nextFrame
 		self.prevFrame = prevFrame
 		self.message = message
@@ -100,7 +115,7 @@ class browse(Frame):
 		bBrowse = Button(self.entryFrame, text = 'Browse', width = 10, borderwidth = buttonBD, command = self.getFilePathToEntry)	
 		bBrowse.pack(side = LEFT, padx=4, pady=2)
 
-		bCancel = Button(self, text = 'Cancel', width = 10, borderwidth = buttonBD, command = self.controller.closeWindow)	
+		bCancel = Button(self, text = 'Cancel', width = 10, borderwidth = buttonBD, command = self.closeWindow)	
 		bCancel = bCancel.pack(side = RIGHT, anchor = S, padx=lowerButtonPadx, pady=lowerButtonPady)
 		for button in buttonInfo:
 			# Set cancel button and location
@@ -135,6 +150,13 @@ class browse(Frame):
 		"""Go back to the previous frame (page)."""
 
 		self.controller.showFrame(self.prevFrame)
+
+	def closeWindow(self):
+		self.isCancelled = True
+		self.controller.closeWindow()
+
+	def toContinue(self):
+		return not self.isCancelled
 
 	def getPath(self):
 
@@ -204,7 +226,8 @@ class saveXML(browse):
 		fileType2 = ("Text", "*.txt")
 		fileType3 = ("All files", "*.*")
 
-		path = asksaveasfilename(defaultextension= '.xml', filetypes = (fileType1, fileType2, fileType3), parent = self.parent)
+		path = asksaveasfilename(filetypes = (fileType1, fileType2, fileType3), parent = self.parent)
+		print(path + 'asdfasdfasdf')
 
 		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
 		if path != '':
@@ -222,8 +245,73 @@ class saveXML(browse):
 
 	def getCheckBoxVal(self):
 		return self.checkVar.get()
-
-if __name__ == "__main__":
-    app = cakeApp()
-    app.mainloop()
  
+class errorMessage(Frame):
+	"""A class of error message interface that presents saves(optional) error messages.
+
+		Parameters
+		----------
+		parent: Tk
+			A window for an application.
+		message: string
+			An error message.
+		textFilePath: string
+			An error message text file destination. 
+	"""
+
+	def __init__(self, parent, message):
+		"""Creat an error message interface."""
+
+		self.parent = parent				# Main window
+		self.message = message 				# Error message
+		# Creat GUI
+		self.initGUI()
+
+	def initGUI(self):
+		"""Creat GUI including a title, message, and buttons."""
+
+		# Set window's title
+		self.parent.title("Error Message")
+		# Creat frames that contain messages and buttons 
+		self.buttonFrame = Frame(self.parent)
+		self.buttonFrame.pack(fill = BOTH, expand = True)
+		messageFrame = Frame(self.buttonFrame, borderwidth = 1)
+		messageFrame.pack(fill = BOTH, expand = True)
+		# Creat buttons
+		self.makeButtons()
+		# Create and show an error message as an label
+		var = StringVar()
+		label = Message(messageFrame, textvariable=var, relief=RAISED, width = 1000)
+		var.set(self.message)
+		label.pack(fill = BOTH, expand = True)
+
+	def makeButtons(self):
+		"""Create all buttons."""
+
+		# Create save and ok buttons and set their locations
+		bSave = Button(self.buttonFrame, text = "Save", width = 5, command = self.save)
+		bSave.pack(side = RIGHT, padx=5, pady=2)
+		bOk = Button(self.buttonFrame, text = "Ok", width = 5, command = self.parent.destroy)
+		bOk.pack(side = RIGHT, padx=3, pady=2)
+
+	def save(self):
+		fileType1 = ("Text", "*.txt")
+		fileType2 = ("All files", "*.*")
+		path = asksaveasfilename(defaultextension= '.txt', filetypes = (fileType1, fileType2), parent = self.parent)
+		self.writeToText(path)
+
+	def writeToText(self, textFilePath):
+		"""Write an error message into a text file and save it in the current directory."""
+
+		# Create a text file for write only mode in the current directory
+		file = open(textFilePath,'w')
+		# Write a message into file 
+		file.write(self.message)
+		# Close file
+		file.close()
+		# Close the interface
+		self.parent.destroy()
+
+# w = Tk()
+# errorMessage(w, '\n'.join(['asdf', 'avdfwer'] + ['elton', 'shon']))
+# w.mainloop()
