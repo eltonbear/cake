@@ -4,19 +4,11 @@ import math
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
-def writeXml(excelData,dieFolderPath, XMLpath):
+def writeXml(excelData, dieFolderPath, XMLpath):
 	# Get the product name
 	productName = excelData['productName']
 	# Get a list of dictionaries of parts
 	parts = excelData['data']
-	# Create a root of the xml file
-	root = Element('Rec_SubstrateRecord')
-	# Create a version element and its content
-	versionElement = SubElement(root, 'Version')
-	versionElement.text = '7.6.22'
-	# Create an alignment name element with a content of the product name
-	alignmentNameElement = SubElement(root, 'AlignmentName')
-	alignmentNameElement.text = productName
 	# Get a list of die file names in the die folder
 	dieFileList = os.listdir(dieFolderPath)
 
@@ -63,7 +55,7 @@ def writeXml(excelData,dieFolderPath, XMLpath):
 				# Get tip number from dictionary
 				tipNumber = TipAndCamNum['TipNbr']
 				# Change the layer name to 'localAlignment' if it's not either 'PCB' or 'Miboard'
-				if layer != 'PCB' or layer != 'Miboard':  ##################################### what are the names for layer
+				if layer != 'PCB' and layer != 'Miboard':  ##################################### what are the names for layer
 					layer = 'localAlignment'
 				# Write a part element with given imformation
 				partElement = writePart(part, dieName, TipAndCamNum['CameraNbr'])
@@ -90,14 +82,36 @@ def writeXml(excelData,dieFolderPath, XMLpath):
 					fakeRoot.append(partElement)
 					# Asign the layer key to the tip number key to the root in the dictionary
 					layersToTipsToPartElementsDict[layer] = {tipNumber: fakeRoot}
+
 	# If there are any errors, return the error messaegs
 	if error:
 		return {'missingDie': missingDieFile, 'error': errorInFile}
 	else:
 		### combine trees useing extend. and save them into 3 different files
-		tree = ElementTree(root)
-		tree.write(XMLpath)
+		treePCB = creatXMLTree(productName, layersToTipsToPartElementsDict['PCB'])
+		treeMiboard = creatXMLTree(productName, layersToTipsToPartElementsDict['Miboard'])
+
+		treePCB.write(XMLpath['PCB'])
+		treeMiboard.write(XMLpath['Miboard'])
 		return {}
+
+def creatXMLTree(productName, fakeRootsSortedWithTipNums):
+	# Create a root of the xml file
+	root = Element('Rec_SubstrateRecord')
+	# Create a version element and its content
+	versionElement = SubElement(root, 'Version')
+	versionElement.text = '7.6.22'
+	# Create an alignment name element with a content of the product name
+	alignmentNameElement = SubElement(root, 'AlignmentName')
+	alignmentNameElement.text = productName
+
+	sortedTipNumber = sorted(fakeRootsSortedWithTipNums.keys(), key = int)
+	for tipSize in sortedTipNumber:
+		root.extend(fakeRootsSortedWithTipNums[tipSize])
+
+	tree = ElementTree(root)
+
+	return tree
 
 def writePart(partInfo, dieName, cameraNbr):
 	partElement = Element('Rec_SubstratePlacement')
@@ -176,8 +190,13 @@ def pointTranslation(x1, y1, xo, yo, axesRotationalAngle):
 	print(round(newX, 8), round(newY, 8))
 	return round(newX, 8), -round(newY, 8)
 
-if __name__ == '__main__':
 
+
+if __name__ == '__main__':
+	import excel
+	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15Elements.csv')
+	# print(eee)
+	writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', {'PCB':r'C:\Users\eltoshon\Desktop\cakeXMLfile\15pcb.xml', 'Miboard': r'C:\Users\eltoshon\Desktop\cakeXMLfile\15Miboard.xml'})
 	# print(calcPartAngle(math.pi/2, -110/180*math.pi))
 	# a = calcAxesRotaionalAngle(5, 5 , 0, 10)
 	# print(math.degrees(a))
@@ -185,9 +204,3 @@ if __name__ == '__main__':
 	# a = getTipAndCameraNum(r'C:\Users\eltoshon\Desktop\Die\1GC14038_7740.xml')
 	# print(type(a['TipNbr']))
 	# print(a['TipNbr'])
-
-
-# how string will be in layer 3 (part name? ) also is this hard for the designer? 
-# How is the angle presented? there are negative and positive values
-# Rec_SubstrateSwitchOff?
-# localAlightmet?

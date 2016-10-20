@@ -38,7 +38,6 @@ def readSheet(filePath):
 		productName = productionInfo[0]
 		del sheet.row[emptyRow]
 		del sheet.row[productInfoR]
-		print(sheet.colnames)
 		dataDictionary = sheet.to_records()
 	except:
 		return {'error': 'File format incorrect: ' + filePath}
