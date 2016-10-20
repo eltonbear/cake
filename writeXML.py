@@ -4,13 +4,19 @@ import math
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
-def writeXml(excelData, dieFolderPath, XMLpath):
+def writeXml(excelData, fiducials, dieFolderPath, XMLpath):  #fiducials = {'L1': {'p1': (x1, y1), 'p2': (x2, y2)}, 'L2': {'p1': (x1, y1), 'p2': (x2, y2)}}
 	# Get the product name
 	productName = excelData['productName']
 	# Get a list of dictionaries of parts
 	parts = excelData['data']
 	# Get a list of die file names in the die folder
 	dieFileList = os.listdir(dieFolderPath)
+	# Get a pair of L1 points in a list, if there L1 points
+	if 'L1' in fiducials:
+		pcbPoints = [fiducials['L1']['p1'], fiducials['L1']['p2']]
+	# Get a pair of Miboard points in a list, if there Miboard points
+	if 'L2' in fiducials:
+		miboardPoints = [fiducials['L2']['p1'], fiducials['L2']['p2']]
 
 	refDesToPartDict = {}              	# {'Ref Des': partDictionary}
 	layersToTipsToPartElementsDict = {} # {'layer':{'tip number': fake root}}
@@ -51,11 +57,11 @@ def writeXml(excelData, dieFolderPath, XMLpath):
 			# If there isn't any errors throughout the previous processes, write a part element and append it to root of the xml tree.
 			if not error:
 				# Get layer name from dictionary
-				layer = part['Layer'] ######################################################### assume the title is called 'Layer'
+				layer = part['Layer']
 				# Get tip number from dictionary
 				tipNumber = TipAndCamNum['TipNbr']
-				# Change the layer name to 'localAlignment' if it's not either 'PCB' or 'Miboard'
-				if layer != 'PCB' and layer != 'Miboard':  ##################################### what are the names for layer
+				# Change the layer name to 'localAlignment' if it's not either L1' or 'L2'
+				if layer != 'L1' and layer != 'L2':  ##################################### what are the names for layer
 					layer = 'localAlignment'
 				# Write a part element with given imformation
 				partElement = writePart(part, dieName, TipAndCamNum['CameraNbr'])
@@ -88,8 +94,8 @@ def writeXml(excelData, dieFolderPath, XMLpath):
 		return {'missingDie': missingDieFile, 'error': errorInFile}
 	else:
 		### combine trees useing extend. and save them into 3 different files
-		treePCB = creatXMLTree(productName, layersToTipsToPartElementsDict['PCB'])
-		treeMiboard = creatXMLTree(productName, layersToTipsToPartElementsDict['Miboard'])
+		treePCB = creatXMLTree(productName, layersToTipsToPartElementsDict['L1'])
+		treeMiboard = creatXMLTree(productName, layersToTipsToPartElementsDict['L2'])
 
 		treePCB.write(XMLpath['PCB'])
 		treeMiboard.write(XMLpath['Miboard'])
@@ -163,44 +169,114 @@ def getTipAndCameraNum(filePath):
 		return {'error':'No camera number in file: ' + filePath}
 
 
-def calcAxesRotaionalAngle(x1,y1,x2,y2):
-	deltaX = x2-x1
-	deltaY = y2-y1
+def calcAxesRotaionalAngle(p1, p2):
+	"""Calculate how much the new axes rotate in raidan. Clockwise rotation results a negative angle.
+
+		Parameters
+			----------
+			p1: tuple
+				The first fiducial point, which is also the new origin. p1 --> (x ,y).
+			p2: tiple
+				The second fiducial point. p2 --> (x, y)
+
+		Return: angle in radian
+	"""
+	deltaX = p2[0]-p1[0]
+	deltaY = p2[1]-p1[1]
 
 	return math.atan2(deltaY, deltaX)
 
 def calcPartAngle(ogAngle, axesRotationalAngle):
+	"""Calculate the acutaly angle of a part in the new coordinate system.
+
+		Parameters
+			----------
+			ogAngle: int
+				Original angle the part is pointing in radian.
+			axesRotationalAngle: float
+				The angle that the axes rotated in radian.
+
+		Return: 
+			----------
+			finalAngle: float
+				The new angle that a part points to in the new system in radian.
+	"""
 	
 	finalAngle = (ogAngle - axesRotationalAngle) % (2*math.pi)
 	if finalAngle > math.pi:
 		finalAngle = finalAngle - (2*math.pi)
-	print(math.degrees(axesRotationalAngle), math.degrees(finalAngle))	
-	return round(finalAngle, 8)
+	return finalAngle
 
-def pointTranslation(x1, y1, xo, yo, axesRotationalAngle):
-	radius = math.sqrt((xo-x1)**2+(yo-y1)**2)
-	print(radius, ' r')
-	# The angle to the point is equal to the angle between new origin to the point and new x axis after axes are shift but not rotated - axesRotationalAngle 
-	pointAngle = calcAxesRotaionalAngle(xo, yo, x1, y1) - axesRotationalAngle
-	print('calcAxesRotaionalAngle', math.degrees(calcAxesRotaionalAngle(xo, yo, x1, y1)))
-	print('axesRotationalAngle', math.degrees(axesRotationalAngle))
-	print('pointAngle', math.degrees(pointAngle))
+def pointTranslation(p, p0, axesRotationalAngle):
+	"""Translate a point to a new coordinate in the new coordinate system. Note that the new coordinate is fliped. 
+		Positive Y points down, so and negative sign is added in front of returned y value.
+
+		Parameters
+			----------
+			p: tuple
+				A point to be translated. p --> (x, y)
+			p0: tiple
+				The new origin of the new coordinate system. p0 --> (x, y)
+			axesRotationalAngle: float
+				An angle of axes rotation in radian 
+
+		Return: x and y
+	"""
+	radius = math.sqrt((p0[0]-p[0])**2+(p0[1]-p[1])**2)
+	# The angle to the point is equal to the angle between new origin to the point and new x axis after axes are shift but not rotated minus axesRotationalAngle 
+	pointAngle = calcAxesRotaionalAngle(p0, p) - axesRotationalAngle
 	newX = math.cos(pointAngle) * radius
 	newY = math.sin(pointAngle) * radius
-	print(round(newX, 8), round(newY, 8))
 	return round(newX, 8), -round(newY, 8)
 
+def calcAxesRotaionalAngleTest():
 
+	print(math.degrees(calcAxesRotaionalAngle((0, 0), (5, 5))))
+	print(math.degrees(calcAxesRotaionalAngle((0, 0), (0, 5))))
+	print(math.degrees(calcAxesRotaionalAngle((0, 0), (-5, 5))))
+	print(math.degrees(calcAxesRotaionalAngle((0, 0), (-5, 0))))
+	print(math.degrees(calcAxesRotaionalAngle((0, 0), (-5, -5))))
+	print(math.degrees(calcAxesRotaionalAngle((0, 0), (0, -5))))
+	print(math.degrees(calcAxesRotaionalAngle((0, 0), (5, -5))))
+
+def calcPartAngleTest():
+
+	print(math.degrees(calcPartAngle(0, calcAxesRotaionalAngle((0, 0), (5, 5)))))
+	print(math.degrees(calcPartAngle(math.pi/2, calcAxesRotaionalAngle((0, 0), (5, 5)))))
+	print(math.degrees(calcPartAngle(math.pi, calcAxesRotaionalAngle((0, 0), (5, 5)))))
+	print(math.degrees(calcPartAngle(math.pi/2*3, calcAxesRotaionalAngle((0, 0), (5, 5)))))
+	print('\n')
+	print(math.degrees(calcPartAngle(0, calcAxesRotaionalAngle((0, 0), (-5, 5)))))
+	print(math.degrees(calcPartAngle(math.pi/2, calcAxesRotaionalAngle((0, 0), (-5, 5)))))
+	print(math.degrees(calcPartAngle(math.pi, calcAxesRotaionalAngle((0, 0), (-5, 5)))))
+	print(math.degrees(calcPartAngle(math.pi/2*3, calcAxesRotaionalAngle((0, 0), (-5, 5)))))
+	print('\n')
+	print(math.degrees(calcPartAngle(0, calcAxesRotaionalAngle((0, 0), (5, -5)))))
+	print(math.degrees(calcPartAngle(math.pi/2, calcAxesRotaionalAngle((0, 0), (5, -5)))))
+	print(math.degrees(calcPartAngle(math.pi, calcAxesRotaionalAngle((0, 0), (5, -5)))))
+	print(math.degrees(calcPartAngle(math.pi/2*3, calcAxesRotaionalAngle((0, 0), (5, -5)))))
+
+def pointTranslationTest():
+
+	print(pointTranslation((2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (0, 10))))
+	print(pointTranslation((-2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (0, 10))))
+	print(pointTranslation((2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (10, 10))))
+	print(pointTranslation((2, -2), (-2, -2), calcAxesRotaionalAngle((-2, -2), (-5, -5))))
 
 if __name__ == '__main__':
-	import excel
-	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15Elements.csv')
+	# import excel
+	# eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15Elements.csv')
 	# print(eee)
-	writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', {'PCB':r'C:\Users\eltoshon\Desktop\cakeXMLfile\15pcb.xml', 'Miboard': r'C:\Users\eltoshon\Desktop\cakeXMLfile\15Miboard.xml'})
-	# print(calcPartAngle(math.pi/2, -110/180*math.pi))
-	# a = calcAxesRotaionalAngle(5, 5 , 0, 10)
-	# print(math.degrees(a))
-	# b ,c  = pointTranslation(2, -2, 5, 5, a)
-	# a = getTipAndCameraNum(r'C:\Users\eltoshon\Desktop\Die\1GC14038_7740.xml')
-	# print(type(a['TipNbr']))
-	# print(a['TipNbr'])
+	# writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', {'PCB':r'C:\Users\eltoshon\Desktop\cakeXMLfile\15pcb.xml', 'Miboard': r'C:\Users\eltoshon\Desktop\cakeXMLfile\15Miboard.xml'})
+
+	# calcAxesRotaionalAngleTest()
+	# print('\n')
+	# calcPartAngleTest()
+	# print('\n')
+	# pointTranslationTest()
+
+
+
+
+
+############ how does the die coordinate look like in excel
