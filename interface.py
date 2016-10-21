@@ -41,10 +41,11 @@ class cakeApp(Tk):
 		self.destroy()
 
 	def toContinue(self):
+		
 		return all([frame.toContinue() for frame in self.frames.values()])
 
 	def getPaths(self):
-		print(self.frames['saveXML'].getPath())
+
 		return {frameName: frame.getPath() for frameName, frame in self.frames.items()}
 
 	def ifOpenXML(self):
