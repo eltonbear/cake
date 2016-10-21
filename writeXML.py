@@ -90,21 +90,20 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 					# Asign the layer key to the tip number key to the root in the dictionary
 					layersToTipsToPartElementsDict[layer] = {tipNumber: fakeRoot}
 			error = False
-	paths = []
+
 	# Combine roots to one root in the order of tip number and write them into seperate files
 	for layer, roots in layersToTipsToPartElementsDict.items():
-		if layer != 'localAlignment':
+		if layer != 'localAlignment': #Temp
 			tree = creatXMLTree(productName, roots)
 			path = XMLSaveFolderPath + '/' + productName + '_' + layer + '.XML'
 			tree.write(path)
-			paths.append(path)
 
 	# If there are any errors, return the error messaegs
 	if missingDieFile or errorInFile:
-		return {'missingDie': missingDieFile, 'error': errorInFile, 'path': paths}
+		return {'missingDie': missingDieFile, 'error': errorInFile}
 	else:
 		
-		return {'path', paths}
+		return {}
 
 def creatXMLTree(productName, fakeRootsSortedWithTipNums):
 	# Create a root of the xml file
@@ -292,6 +291,4 @@ def pointTranslationTest():
 
 
 	# local alignment angle???????????????????
-	# ref des does not repeat ? but die name repeats???????????/
-	# Product name without dash?????
-	# would you rather open  the folder or files???
+	# adjust error message configuration

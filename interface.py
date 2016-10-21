@@ -215,7 +215,7 @@ class saveXML(browse):
 	def initGUI(self):
 		super().initGUI()
 		self.checkVar = IntVar()
-		bCheck = Checkbutton(self, text = "Open XML", variable = self.checkVar, onvalue = 1, offvalue = 0, borderwidth = 2)
+		bCheck = Checkbutton(self, text = "Open XML folder", variable = self.checkVar, onvalue = 1, offvalue = 0, borderwidth = 2)
 		bCheck.pack(side = LEFT, anchor=S, padx=6, pady=4)
 		buttons = [{'text': 'Save', 'width': 7, 'function': self.save}, {'text': 'Back', 'width': 7, 'function': self.back}]
 		self.makeButtons(buttons)

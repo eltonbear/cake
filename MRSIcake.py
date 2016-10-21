@@ -23,8 +23,7 @@ def runApp():
 					message = '\n'.join(['Error'] + ifError['error'])
 				app.errorMessageWindow(message)
 			if openXML:
-				for xmlPath in ifError['path']:
-					os.startfile(xmlPath)
+				os.startfile(paths['saveXML'])
 
 if __name__ == "__main__":
 	runApp()
