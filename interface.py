@@ -165,9 +165,8 @@ class browse(Frame):
 class browseSheet(browse):
 
 	def __init__(self, parent, controller):
-		message = 'Select an Excelsheet'
-		browse.__init__(self,
-		 parent, controller, 'browseFolder', message = message)
+		message = 'Select an Excelsheet (No .csv file)'
+		browse.__init__(self, parent, controller, 'browseFolder', message = message)
 
 	def initGUI(self):
 		super().initGUI()
@@ -175,12 +174,11 @@ class browseSheet(browse):
 		self.makeButtons(button)
 
 	def getFilePathToEntry(self):
-		fileType1 = ("Comma Delimited CSV", "*.CSV")
-		fileType2 = ("Excel Workbook", "*.xlsx")
-		fileType3 = ("Excel Macro-Enabled Workbook", "*.xlsm")
-		fileType4 = ("All files", "*.*")
+		fileType1 = ("Excel Workbook", "*.xlsx")
+		fileType2 = ("Excel Macro-Enabled Workbook", "*.xlsm")
+		fileType3 = ("All files", "*.*")
 
-		path = askopenfilename(filetypes = (fileType1, fileType2, fileType3, fileType4), parent = self.parent)
+		path = askopenfilename(filetypes = (fileType1, fileType2, fileType3), parent = self.parent)
 
 		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
 		if path != '':
@@ -210,7 +208,7 @@ class browseFolder(browse):
 class saveXML(browse):
 
 	def __init__(self, parent, controller):
-		message = 'Save XML file'
+		message = 'Select a folder to save XML files'
 		browse.__init__(self, parent, controller, prevFrame = 'browseFolder', message = message)
 
 	def initGUI(self):
@@ -222,12 +220,8 @@ class saveXML(browse):
 		self.makeButtons(buttons)
 
 	def getFilePathToEntry(self):
-		fileType1 = ("XML Data", "*.xml")
-		fileType2 = ("Text", "*.txt")
-		fileType3 = ("All files", "*.*")
 
-		path = asksaveasfilename(filetypes = (fileType1, fileType2, fileType3), parent = self.parent)
-		print(path + 'asdfasdfasdf')
+		path = askdirectory(parent = self.parent)
 
 		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
 		if path != '':
@@ -312,6 +306,5 @@ class errorMessage(Frame):
 		# Close the interface
 		self.parent.destroy()
 
-# w = Tk()
-# errorMessage(w, '\n'.join(['asdf', 'avdfwer'] + ['elton', 'shon']))
-# w.mainloop()
+app = cakeApp()
+app.mainloop()
