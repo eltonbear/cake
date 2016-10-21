@@ -78,9 +78,6 @@ def readSheet(filePath):
 
 	return {'productName': productName, 'data': partsDictionaries, 'fiducials': alignmentDictionaries}
 
-# if __name__ == "__main__":
-#     data = readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
-
 
 
 
