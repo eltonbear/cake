@@ -305,6 +305,3 @@ class errorMessage(Frame):
 		file.close()
 		# Close the interface
 		self.parent.destroy()
-
-app = cakeApp()
-app.mainloop()
