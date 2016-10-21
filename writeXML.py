@@ -20,9 +20,6 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 	if 'L2' in fiducials:
 		fiducials['L2']['axesRotation'] = calcAxesRotaionalAngle(fiducials['L2']['p1'], fiducials['L2']['p2'])
 	
-	# # Temp			
-	# fiducials['localAlignment']['axesRotation'] = 0
-
 	refDesToPartDict = {}              	# {'Ref Des': partDictionary}
 	layersToTipsToPartElementsDict = {} # {'layer':{'tip number': fake root}}
 	dieNameToTipAndCameraNumDict= {}	# {'dieName': {'camera number': camNum, 'tip number': tipNum}}
@@ -49,7 +46,6 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 				else:
 					missingDieFile.append(dieName)
 					error = True
-					######################################################################## are there supposed to be all die files i need? 
 				# If file path is found, access the file and get the tip number and camera number. Gives errors if there are exceptions parsing the xml file or finding the desire elements
 				if dieFileName:
 					dieFilePath = dieFolderPath + '/' + dieFileName
@@ -59,7 +55,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 						error = True					
 					else:
 						dieNameToTipAndCameraNumDict[dieName] = TipAndCamNum
-			# If there isn't any errors throughout the previous processes, write a part element and append it to root of the xml tree.
+			# If there isn't any errors throughout the previous processes, write a part element and append it to the corresponding root based on its tip number.
 			if not error:
 				# Get layer name from dictionary
 				layer = part['Layer']
