@@ -4,19 +4,24 @@ import math
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
-def writeXml(excelData, fiducials, dieFolderPath, XMLpath):  #fiducials = {'L1': {'p1': (x1, y1), 'p2': (x2, y2)}, 'L2': {'p1': (x1, y1), 'p2': (x2, y2)}}
+def writeXml(excelData, dieFolderPath, XMLSaveFolderPath): 
 	# Get the product name
-	productName = excelData['productName']
+	productName = excelData['productName'].replace('-', '')
 	# Get a list of dictionaries of parts
 	parts = excelData['data']
+	# Get fiducials points
+	fiducials = excelData['fiducials']  # fiducials = {'L1': {'p1': (x1, y1), 'p2': (x2, y2)}, 'L2': {'p1': (x1, y1), 'p2': (x2, y2)}}
 	# Get a list of die file names in the die folder
 	dieFileList = os.listdir(dieFolderPath)
-	# Get a pair of L1 points in a list, if there L1 points
+	# Added axes rotational angle into L1, if there is L1
 	if 'L1' in fiducials:
-		pcbPoints = [fiducials['L1']['p1'], fiducials['L1']['p2']]
-	# Get a pair of Miboard points in a list, if there Miboard points
+		fiducials['L1']['axesRotation'] = calcAxesRotaionalAngle(fiducials['L1']['p1'], fiducials['L1']['p2'])
+	# Added axes rotational angle into L2, if there is L2
 	if 'L2' in fiducials:
-		miboardPoints = [fiducials['L2']['p1'], fiducials['L2']['p2']]
+		fiducials['L2']['axesRotation'] = calcAxesRotaionalAngle(fiducials['L2']['p1'], fiducials['L2']['p2'])
+	
+	# # Temp			
+	# fiducials['localAlignment']['axesRotation'] = 0
 
 	refDesToPartDict = {}              	# {'Ref Des': partDictionary}
 	layersToTipsToPartElementsDict = {} # {'layer':{'tip number': fake root}}
@@ -36,19 +41,19 @@ def writeXml(excelData, fiducials, dieFolderPath, XMLpath):  #fiducials = {'L1':
 			# Grab the corresponding tip number and camera number to die name from the die xml file if not already looked up
 			if dieName not in dieNameToTipAndCameraNumDict:
 				# There are two possible file extension for a xml file (.txt and .xml). If both of these file paths not exist in the folder, gives an error.
-				fileName = ''
+				dieFileName = ''
 				if dieName + '.XML' in dieFileList:
-					fileName = dieName + '.XML'
+					dieFileName = dieName + '.XML'
 				elif dieName + 'txt' in dieFileList:
-					fileName = dieName + '.txt'
+					dieFileName = dieName + '.txt'
 				else:
 					missingDieFile.append(dieName)
 					error = True
 					######################################################################## are there supposed to be all die files i need? 
 				# If file path is found, access the file and get the tip number and camera number. Gives errors if there are exceptions parsing the xml file or finding the desire elements
-				if fileName:
-					xmlPath = dieFolderPath + '/' + fileName
-					TipAndCamNum = getTipAndCameraNum(xmlPath)
+				if dieFileName:
+					dieFilePath = dieFolderPath + '/' + dieFileName
+					TipAndCamNum = getTipAndCameraNum(dieFilePath)
 					if 'error' in TipAndCamNum: # if there is 'error' key in TipAndCamNum, then there is error in getCameraNum
 						errorInFile.append(TipAndCamNum['error'])
 						error = True					
@@ -59,14 +64,14 @@ def writeXml(excelData, fiducials, dieFolderPath, XMLpath):  #fiducials = {'L1':
 				# Get layer name from dictionary
 				layer = part['Layer']
 				# Get tip number from dictionary
-				tipNumber = TipAndCamNum['TipNbr']
+				tipNumber = dieNameToTipAndCameraNumDict[dieName]['TipNbr']
 				# Change the layer name to 'localAlignment' if it's not either L1' or 'L2'
-				if layer != 'L1' and layer != 'L2':  ##################################### what are the names for layer
+				if layer != 'L1' and layer != 'L2':
 					layer = 'localAlignment'
 				# Write a part element with given imformation
-				partElement = writePart(part, dieName, TipAndCamNum['CameraNbr'])
+				partElement = writePart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
 
-				# If the layer ket is already in the dictionary				
+				# If the layer key is already in the dictionary				
 				if layer in layersToTipsToPartElementsDict:
 					# Get the dictionary of tip numbers to part elements for that one layer
 					partsOnOneLayer = layersToTipsToPartElementsDict[layer]
@@ -88,17 +93,20 @@ def writeXml(excelData, fiducials, dieFolderPath, XMLpath):  #fiducials = {'L1':
 					fakeRoot.append(partElement)
 					# Asign the layer key to the tip number key to the root in the dictionary
 					layersToTipsToPartElementsDict[layer] = {tipNumber: fakeRoot}
+			error = False
+
+	# Combine roots to one root in the order of tip number and write them into seperate files
+	treePCB = creatXMLTree(productName, layersToTipsToPartElementsDict['L1'])
+	treeMiboard = creatXMLTree(productName, layersToTipsToPartElementsDict['L2'])
+
+	treePCB.write(XMLSaveFolderPath + '/' + productName + '_L1.XML')
+	treeMiboard.write(XMLSaveFolderPath + '/' + productName + '_L2.XML')
 
 	# If there are any errors, return the error messaegs
-	if error:
+	if missingDieFile or errorInFile:
 		return {'missingDie': missingDieFile, 'error': errorInFile}
 	else:
-		### combine trees useing extend. and save them into 3 different files
-		treePCB = creatXMLTree(productName, layersToTipsToPartElementsDict['L1'])
-		treeMiboard = creatXMLTree(productName, layersToTipsToPartElementsDict['L2'])
-
-		treePCB.write(XMLpath['PCB'])
-		treeMiboard.write(XMLpath['Miboard'])
+		
 		return {}
 
 def creatXMLTree(productName, fakeRootsSortedWithTipNums):
@@ -119,18 +127,27 @@ def creatXMLTree(productName, fakeRootsSortedWithTipNums):
 
 	return tree
 
-def writePart(partInfo, dieName, cameraNbr):
+def writePart(partInfo, dieName, cameraNbr, fiducials):
 	partElement = Element('Rec_SubstratePlacement')
 	enableElment = SubElement(partElement, 'Enabled')
 	enableElment.text = '1'
 	cameraNbrElement = SubElement(partElement, 'CameraNbr')
 	cameraNbrElement.text = cameraNbr
 	pxElement = SubElement(partElement, 'PlacementCoords-X')
-	pxElement.text = str(partInfo['X-location'])
+	# Temp (To avoid local alignment)
+	if partInfo['Layer'] == 'L1' or partInfo['Layer'] == 'L2':
+		x, y = pointTranslation((partInfo['X-location'], partInfo['Y-location']), fiducials[partInfo['Layer']]['p1'],  fiducials[partInfo['Layer']]['axesRotation'])
+	else:
+		x, y = 0, 0
+	pxElement.text = str(x)
 	pyElement = SubElement(partElement, 'PlacementCoords-Y')
-	pyElement.text = str(partInfo['Y-location'])
+	pyElement.text = str(y)
 	pAngleElement = SubElement(partElement, 'PlacementAngle')
-	pAngleElement.text = str(partInfo['Rotation'])
+	# Temp
+	if partInfo['Layer'] == 'L1' or partInfo['Layer'] == 'L2':
+		pAngleElement.text = str(calcPartAngle(partInfo['Rotation'], fiducials[partInfo['Layer']]['axesRotation']))
+	else:
+		pAngleElement.text = '0'
 	dieNameElement = SubElement(partElement, 'DieName')
 	dieNameElement.text = dieName
 	cameraHeightElement = SubElement(partElement, 'CameraHeight')
@@ -264,10 +281,10 @@ def pointTranslationTest():
 	print(pointTranslation((2, -2), (-2, -2), calcAxesRotaionalAngle((-2, -2), (-5, -5))))
 
 if __name__ == '__main__':
-	# import excel
-	# eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15Elements.csv')
-	# print(eee)
-	# writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', {'PCB':r'C:\Users\eltoshon\Desktop\cakeXMLfile\15pcb.xml', 'Miboard': r'C:\Users\eltoshon\Desktop\cakeXMLfile\15Miboard.xml'})
+	import excel
+	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
+	e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
+	print(e)
 
 	# calcAxesRotaionalAngleTest()
 	# print('\n')
@@ -277,6 +294,6 @@ if __name__ == '__main__':
 
 
 
-
-
-############ how does the die coordinate look like in excel
+	# local alignment angle???????????????????
+	# ref des does not repeat ? but die name repeats???????????/
+	# Product name without dash?????
