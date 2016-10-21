@@ -90,20 +90,21 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 					# Asign the layer key to the tip number key to the root in the dictionary
 					layersToTipsToPartElementsDict[layer] = {tipNumber: fakeRoot}
 			error = False
-
+	paths = []
 	# Combine roots to one root in the order of tip number and write them into seperate files
-	treePCB = creatXMLTree(productName, layersToTipsToPartElementsDict['L1'])
-	treeMiboard = creatXMLTree(productName, layersToTipsToPartElementsDict['L2'])
-
-	treePCB.write(XMLSaveFolderPath + '/' + productName + '_L1.XML')
-	treeMiboard.write(XMLSaveFolderPath + '/' + productName + '_L2.XML')
+	for layer, roots in layersToTipsToPartElementsDict.items():
+		if layer != 'localAlignment':
+			tree = creatXMLTree(productName, roots)
+			path = XMLSaveFolderPath + '/' + productName + '_' + layer + '.XML'
+			tree.write(path)
+			paths.append(path)
 
 	# If there are any errors, return the error messaegs
 	if missingDieFile or errorInFile:
-		return {'missingDie': missingDieFile, 'error': errorInFile}
+		return {'missingDie': missingDieFile, 'error': errorInFile, 'path': paths}
 	else:
 		
-		return {}
+		return {'path', paths}
 
 def creatXMLTree(productName, fakeRootsSortedWithTipNums):
 	# Create a root of the xml file
@@ -276,11 +277,11 @@ def pointTranslationTest():
 	print(pointTranslation((2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (10, 10))))
 	print(pointTranslation((2, -2), (-2, -2), calcAxesRotaionalAngle((-2, -2), (-5, -5))))
 
-if __name__ == '__main__':
-	import excel
-	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
-	e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
-	print(e)
+# if __name__ == '__main__':
+	# import excel
+	# eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
+	# e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
+	# print(e)
 
 	# calcAxesRotaionalAngleTest()
 	# print('\n')
@@ -293,3 +294,4 @@ if __name__ == '__main__':
 	# local alignment angle???????????????????
 	# ref des does not repeat ? but die name repeats???????????/
 	# Product name without dash?????
+	# would you rather open  the folder or files???
