@@ -94,7 +94,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 	# Combine roots to one root in the order of tip number and write them into seperate files
 	for layer, roots in layersToTipsToPartElementsDict.items():
 		if layer != 'localAlignment': #Temp
-			tree = creatXMLTree(productName, roots)
+			tree = creatXMLTree(productName, roots, layer)
 			path = XMLSaveFolderPath + '/' + productName + '_' + layer + '.XML'
 			tree.write(path)
 
@@ -105,7 +105,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 		
 		return {}
 
-def creatXMLTree(productName, fakeRootsSortedWithTipNums):
+def creatXMLTree(productName, fakeRootsSortedWithTipNums, layer):
 	# Create a root of the xml file
 	root = Element('Rec_SubstrateRecord')
 	# Create a version element and its content
@@ -113,7 +113,7 @@ def creatXMLTree(productName, fakeRootsSortedWithTipNums):
 	versionElement.text = '7.6.22'
 	# Create an alignment name element with a content of the product name
 	alignmentNameElement = SubElement(root, 'AlignmentName')
-	alignmentNameElement.text = productName
+	alignmentNameElement.text = productName + '_' + layer
 
 	sortedTipNumber = sorted(fakeRootsSortedWithTipNums.keys(), key = int)
 	for tipSize in sortedTipNumber:
