@@ -15,7 +15,6 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 	fiducials = excelData['fiducials']  # fiducials = {'L1': {'p1': (x1, y1), 'p2': (x2, y2)}, 'L2': {'p1': (x1, y1), 'p2': (x2, y2)}}
 	# Get a list of die file names in the die folder
 	dieFileDict = {fileName.lower(): fileName for fileName in os.listdir(dieFolderPath)}
-	# print(dieFileDict)
 	# Added axes rotational angle into L1, if there is L1
 	if 'L1' in fiducials:
 		fiducials['L1']['axesRotation'] = calcAxesRotaionalAngle(fiducials['L1']['p1'], fiducials['L1']['p2'])
@@ -23,13 +22,14 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 	if 'L2' in fiducials:
 		fiducials['L2']['axesRotation'] = calcAxesRotaionalAngle(fiducials['L2']['p1'], fiducials['L2']['p2'])
 	
-	refDesToPartDict = {}              		# {'Ref Des': partDictionary}
-	layersToTipsToPartRootsDict = {}		# {'layer':{'tip number': fake root}}
-	layersToLocalsToTipsToPartRootsDict = {}	# {'local1':{'tip number': fake root}, 'local2':{'tip number': fake root}}
-	dieNameToTipAndCameraNumDict= {}		# {'dieName': {'camera number': camNum, 'tip number': tipNum}}
-	missingDieFile = set()             		# A set of missing die file names if there any
-	errorInFile = []						# A list of error messages when the process is run if there is any
-	error = False							# Starts with no errors
+	refDesToPartDict = {}              			# {'Ref Des': partDictionary}
+	layersToTipsToPartRootsDict = {}			# {'layer':{'tip number': fake root}}
+	layersToLocalsToTipsToPartRootsDict = {}	# {'L1': {'local1':{'tip number': fake root}...},'L2':{'local3':{'tip number': fake root}...}}
+	dieNameToTipAndCameraNumDict= {}			# {'dieName': {'camera number': camNum, 'tip number': tipNum}}
+	dieNameToRealDieFileName = {}				# {'dieName': dieFileName.....}
+	missingDieFile = set()             			# A set of missing die file names if there any
+	errorInFile = []							# A list of error messages when the process is run if there is any
+	error = False								# Starts with no errors
 	# Iterate through all parts dictionaries in the list
 	for part in parts:
 		# Get Ref Des value, and If 'Ref Des' value exists in the dictionary, do the following
@@ -47,8 +47,10 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 				dieFileNameLower = dieNameLower + '.xml'
 				if dieFileNameLower in dieFileDict:
 					dieFileName = dieFileDict[dieFileNameLower]
-				elif dieNameLower + 'txt' in dieFileDict:
+					dieNameToRealDieFileName[dieName] = dieFileName
+				elif dieNameLower + '.txt' in dieFileDict:
 					dieFileName = dieFileDict[dieNameLower + '.txt']
+					dieNameToRealDieFileName[dieName] = dieFileName
 				else:
 					missingDieFile.add(dieName)
 					error = True
@@ -73,18 +75,14 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 					if layer not in layersToLocalsToTipsToPartRootsDict:
 						layersToLocalsToTipsToPartRootsDict[layer] = {}
 					# Write a part element with given imformation
-					partE = writeLocalAlignmentPart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials, layer)
+					partE = writeLocalAlignmentPart(part, dieNameToRealDieFileName[dieName][0:-4], dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials, layer)
 					createFakeRoot(layersToLocalsToTipsToPartRootsDict[layer], local, tipNumber, partE)
 				else:
-					partE = writePart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
+					partE = writePart(part, dieNameToRealDieFileName[dieName][0:-4], dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
 					# Write a part element with given imformation
 					createFakeRoot(layersToTipsToPartRootsDict, layer, tipNumber, partE)
 
 			error = False
-	# print(dieNameToTipAndCameraNumDict, '\n')
-	# print(layerToBaseAlignment, '\n')
-	# print(layersToTipsToPartRootsDict, '\n')
-	# print(layersToLocalsToTipsToPartRootsDict)
 
 	# Combine roots to one root in the order of tip number and write them into seperate files
 	for layer, roots in layersToTipsToPartRootsDict.items():
@@ -334,22 +332,3 @@ def pointTranslationTest():
 	print(pointTranslation((-2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (0, 10))))
 	print(pointTranslation((2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (10, 10))))
 	print(pointTranslation((2, -2), (-2, -2), calcAxesRotaionalAngle((-2, -2), (-5, -5))))
-
-# if __name__ == '__main__':
-# 	# import excel
-# 	# eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
-# 	# e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
-# 	# print(e)
-
-# 	# calcAxesRotaionalAngleTest()
-# 	# print('\n')
-# 	# calcPartAngleTest()
-# 	# print('\n')
-# 	# pointTranslationTest()
-# 	print(calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973)),math.degrees(calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973))) ,'calcAxesRotaionalAngle')
-
-# 	print(calcPartAngle(math.pi*3/2, calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973))), math.degrees(calcPartAngle(math.pi*3/2, calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973)))), 'calcPartAngle')
-
-
-	# local alignment angle???????????????????
-	# adjust error message configuration
