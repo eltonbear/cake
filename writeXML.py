@@ -1,4 +1,5 @@
 import os
+import re
 import os.path
 import math
 import xml.etree.ElementTree as ET
@@ -20,12 +21,13 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 	if 'L2' in fiducials:
 		fiducials['L2']['axesRotation'] = calcAxesRotaionalAngle(fiducials['L2']['p1'], fiducials['L2']['p2'])
 	
-	refDesToPartDict = {}              	# {'Ref Des': partDictionary}
-	layersToTipsToPartElementsDict = {} # {'layer':{'tip number': fake root}}
-	dieNameToTipAndCameraNumDict= {}	# {'dieName': {'camera number': camNum, 'tip number': tipNum}}
-	missingDieFile = []                 # A list of missing die file names if there any
-	errorInFile = []					# A list of error messages when the process is run if there is any
-	error = False						# Starts with no errors
+	refDesToPartDict = {}              		# {'Ref Des': partDictionary}
+	layersToTipsToPartRootsDict = {}		# {'layer':{'tip number': fake root}}
+	layersToLocalsToTipsToPartRootsDict = {}	# {'local1':{'tip number': fake root}, 'local2':{'tip number': fake root}}
+	dieNameToTipAndCameraNumDict= {}		# {'dieName': {'camera number': camNum, 'tip number': tipNum}}
+	missingDieFile = []                		# A list of missing die file names if there any
+	errorInFile = []						# A list of error messages when the process is run if there is any
+	error = False							# Starts with no errors
 	# Iterate through all parts dictionaries in the list
 	for part in parts:
 		# Get Ref Des value, and If 'Ref Des' value exists in the dictionary, do the following
@@ -61,51 +63,78 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 				layer = part['Layer']
 				# Get tip number from dictionary
 				tipNumber = dieNameToTipAndCameraNumDict[dieName]['TipNbr']
-				# Change the layer name to 'localAlignment' if it's not either L1' or 'L2'
+				# Get layer name and base alignment if it's not either L1' or 'L2'
 				if layer != 'L1' and layer != 'L2':
-					layer = 'localAlignment'
-				# Write a part element with given imformation
-				partElement = writePart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
-
-				# If the layer key is already in the dictionary				
-				if layer in layersToTipsToPartElementsDict:
-					# Get the dictionary of tip numbers to part elements for that one layer
-					partsOnOneLayer = layersToTipsToPartElementsDict[layer]
-					# If tip number key is in the dictionary
-					if tipNumber in partsOnOneLayer:
-						# Append the part to the root
-						partsOnOneLayer[tipNumber].append(partElement)
-					else:
-						# Create a sudo root for the xml file
-						fakeRoot = Element('Rec_SubstrateRecord')
-						# Append the part to the root
-						fakeRoot.append(partElement)
-						# Asign the tip number key to the root in the dictionary
-						partsOnOneLayer[tipNumber] = fakeRoot
+					local, layer = layer.split('_')
+					if layer not in layersToLocalsToTipsToPartRootsDict:
+						layersToLocalsToTipsToPartRootsDict[layer] = {}
+					# Write a part element with given imformation
+					partE = writeLocalAlignmentPart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
+					createFakeRoot(layersToLocalsToTipsToPartRootsDict[layer], local, tipNumber, partE)
 				else:
-					# Create a sudo root for the xml file
-					fakeRoot = Element('Rec_SubstrateRecord')
-					# Append the part to the root
-					fakeRoot.append(partElement)
-					# Asign the layer key to the tip number key to the root in the dictionary
-					layersToTipsToPartElementsDict[layer] = {tipNumber: fakeRoot}
+					partE = writePart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
+					# Write a part element with given imformation
+					createFakeRoot(layersToTipsToPartRootsDict, layer, tipNumber, partE)
+
 			error = False
+	# print(dieNameToTipAndCameraNumDict, '\n')
+	# print(layerToBaseAlignment, '\n')
+	# print(layersToTipsToPartRootsDict, '\n')
+	# print(layersToLocalsToTipsToPartRootsDict)
 
 	# Combine roots to one root in the order of tip number and write them into seperate files
-	for layer, roots in layersToTipsToPartElementsDict.items():
-		if layer != 'localAlignment': #Temp
-			tree = creatXMLTree(productName, roots, layer)
-			path = XMLSaveFolderPath + '/' + productName + '_' + layer + '.XML'
-			tree.write(path)
+	for layer, roots in layersToTipsToPartRootsDict.items():
+		finalRoot = creatTemplate(layer, productName)
+		combineRoots(finalRoot, productName, roots)
+		tree = ElementTree(finalRoot)
+		path = XMLSaveFolderPath + '/' + productName + '_' + layer + '.XML'
+		tree.write(path)
+
+	
+	for layer, localss in layersToLocalsToTipsToPartRootsDict.items():
+		finalRoot = creatTemplate('Local', productName)
+		localKeys = sorted(localss.keys(), key = naturalKey)
+		for local in localKeys:
+			finalRoot.append(writeLocalOpen(local + '_' + productName[-4:]))
+			combineRoots(finalRoot, productName, localss[local])
+			finalRoot.append(writeLocalClosed(local + '_' + productName[-4:]))
+
+		tree = ElementTree(finalRoot)
+		path = XMLSaveFolderPath + '/' + productName + '_Local_' + layer + '.XML'
+		tree.write(path)
 
 	# If there are any errors, return the error messaegs
 	if missingDieFile or errorInFile:
 		return {'missingDie': missingDieFile, 'error': errorInFile}
 	else:
-		
 		return {}
 
-def creatXMLTree(productName, fakeRootsSortedWithTipNums, layer):
+def createFakeRoot(layerToTipToRoots, layer, tipNumber, partElement):
+	if layer in layerToTipToRoots:
+		# Get the dictionary of tip numbers to part elements for that one layer
+		partsOnOneLayer = layerToTipToRoots[layer]
+		# If tip number key is in the dictionary
+		if tipNumber in partsOnOneLayer:
+			# Append the part to the root
+			partsOnOneLayer[tipNumber].append(partElement)
+		else:
+			# Create a sudo root for the xml file
+			fakeRoot = Element('Rec_SubstrateRecord')
+			# Append the part to the root
+			fakeRoot.append(partElement)
+			# Asign the tip number key to the root in the dictionary
+			partsOnOneLayer[tipNumber] = fakeRoot
+	else:
+		# Create a sudo root for the xml file
+		fakeRoot = Element('Rec_SubstrateRecord')
+		# Append the part to the root
+		fakeRoot.append(partElement)
+		# Asign the layer key to the tip number key to the root in the dictionary
+		layerToTipToRoots[layer] = {tipNumber: fakeRoot}
+
+	return layerToTipToRoots
+
+def creatTemplate(layer, productName):
 	# Create a root of the xml file
 	root = Element('Rec_SubstrateRecord')
 	# Create a version element and its content
@@ -115,22 +144,20 @@ def creatXMLTree(productName, fakeRootsSortedWithTipNums, layer):
 	alignmentNameElement = SubElement(root, 'AlignmentName')
 	alignmentNameElement.text = productName + '_' + layer
 
+	return root
+
+def combineRoots(root, productName, fakeRootsSortedWithTipNums):
+
 	sortedTipNumber = sorted(fakeRootsSortedWithTipNums.keys(), key = int)
 	for tipSize in sortedTipNumber:
 		root.extend(fakeRootsSortedWithTipNums[tipSize])
 
-	tree = ElementTree(root)
-
-	return tree
-
-def writePart(partInfo, dieName, cameraNbr, fiducials):
-	partElement = Element('Rec_SubstratePlacement')
+def writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials):
 	enableElment = SubElement(partElement, 'Enabled')
 	enableElment.text = '1'
 	cameraNbrElement = SubElement(partElement, 'CameraNbr')
 	cameraNbrElement.text = cameraNbr
 	pxElement = SubElement(partElement, 'PlacementCoords-X')
-	# Temp (To avoid local alignment)
 	if partInfo['Layer'] == 'L1' or partInfo['Layer'] == 'L2':
 		x, y = pointTranslation((partInfo['X-location'], partInfo['Y-location']), fiducials[partInfo['Layer']]['p1'],  fiducials[partInfo['Layer']]['axesRotation'])
 	else:
@@ -146,6 +173,10 @@ def writePart(partInfo, dieName, cameraNbr, fiducials):
 		pAngleElement.text = '0'
 	dieNameElement = SubElement(partElement, 'DieName')
 	dieNameElement.text = dieName
+
+def writePart(partInfo, dieName, cameraNbr, fiducials):
+	partElement = Element('Rec_SubstratePlacement')
+	writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials)
 	cameraHeightElement = SubElement(partElement, 'CameraHeight')
 	cameraHeightElement.text = '0'
 	pForceElement = SubElement(partElement, 'PlacementForce')
@@ -162,6 +193,33 @@ def writePart(partInfo, dieName, cameraNbr, fiducials):
 	airPuffTimerElement.text = '0'
 
 	return partElement
+
+def writeLocalAlignmentPart(partInfo, dieName, cameraNbr, fiducials):
+	partElement = Element('Rec_SubstratePlacement')	
+	writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials)
+	referenceNumberElement = SubElement(partElement, 'Comment')
+	referenceNumberElement.text = partInfo['Ref Des']
+
+	return partElement
+def writeLocalOpen(alignmentName):
+	openElement = Element('Rec_SubstrateLocalAlignment')
+	enableElment = SubElement(openElement, 'Enabled')
+	enableElment.text = '1'
+	alignmentNameElement = SubElement(openElement, 'AlignmentName')
+	alignmentNameElement.text = alignmentName
+
+	return openElement
+
+def writeLocalClosed(alignmentName):
+	closeElement = Element('Rec_SubstrateSwitchOff')
+	enableElment = SubElement(closeElement, 'Enabled')
+	enableElment.text = '1'
+	numberLevelElement = SubElement(closeElement, 'NumberLevel')
+	numberLevelElement.text = '1'
+	alignmentNameElement = SubElement(closeElement, 'AlignmentName')
+	alignmentNameElement.text = alignmentName
+
+	return closeElement
 
 def getTipAndCameraNum(filePath):
 	try:
@@ -242,6 +300,10 @@ def pointTranslation(p, p0, axesRotationalAngle):
 	newY = math.sin(pointAngle) * radius
 	return round(newX, 8), -round(newY, 8)
 
+def naturalKey(string):
+    """See http://www.codinghorror.com/blog/archives/001018.html"""
+    return [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', string)]
+
 def calcAxesRotaionalAngleTest():
 
 	print(math.degrees(calcAxesRotaionalAngle((0, 0), (5, 5))))
@@ -276,10 +338,10 @@ def pointTranslationTest():
 	print(pointTranslation((2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (10, 10))))
 	print(pointTranslation((2, -2), (-2, -2), calcAxesRotaionalAngle((-2, -2), (-5, -5))))
 
-# if __name__ == '__main__':
-	# import excel
-	# eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
-	# e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
+if __name__ == '__main__':
+	import excel
+	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
+	e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
 	# print(e)
 
 	# calcAxesRotaionalAngleTest()
