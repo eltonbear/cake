@@ -7,12 +7,15 @@ from xml.etree.ElementTree import ElementTree, Element, SubElement
 def writeXml(excelData, dieFolderPath, XMLSaveFolderPath): 
 	# Get the product name
 	productName = excelData['productName'].replace('-', '')
+	# Get last few digits of the product name
+	lastFewDigits = productName[-3:]
 	# Get a list of dictionaries of parts
 	parts = excelData['data']
 	# Get fiducials points
 	fiducials = excelData['fiducials']  # fiducials = {'L1': {'p1': (x1, y1), 'p2': (x2, y2)}, 'L2': {'p1': (x1, y1), 'p2': (x2, y2)}}
 	# Get a list of die file names in the die folder
-	dieFileList = os.listdir(dieFolderPath)
+	dieFileDict = {fileName.lower(): fileName for fileName in os.listdir(dieFolderPath)}
+	# print(dieFileDict)
 	# Added axes rotational angle into L1, if there is L1
 	if 'L1' in fiducials:
 		fiducials['L1']['axesRotation'] = calcAxesRotaionalAngle(fiducials['L1']['p1'], fiducials['L1']['p2'])
@@ -35,15 +38,17 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 			# Store parts in dictionary
 			refDesToPartDict[refDes] = part
 			# A die name is part number plus an underscore and the last four digit of the product name
-			dieName = part['Part Number'].replace('-', '') + '_' + productName[-4:]
+			dieName = part['Part Number'].replace('-', '') + '_' + lastFewDigits
 			# Grab the corresponding tip number and camera number to die name from the die xml file if not already looked up
 			if dieName not in dieNameToTipAndCameraNumDict:
 				# There are two possible file extension for a xml file (.txt and .xml). If both of these file paths not exist in the folder, gives an error.
 				dieFileName = ''
-				if dieName + '.XML' in dieFileList:
-					dieFileName = dieName + '.XML'
-				elif dieName + 'txt' in dieFileList:
-					dieFileName = dieName + '.txt'
+				dieNameLower = dieName.lower()
+				dieFileNameLower = dieNameLower + '.xml'
+				if dieFileNameLower in dieFileDict:
+					dieFileName = dieFileDict[dieFileNameLower]
+				elif dieNameLower + 'txt' in dieFileDict:
+					dieFileName = dieFileDict[dieNameLower + '.txt']
 				else:
 					missingDieFile.add(dieName)
 					error = True
@@ -94,9 +99,9 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 		finalRoot = creatTemplate('Local', productName)
 		localKeys = sorted(localss.keys(), key = naturalKey)
 		for local in localKeys:
-			finalRoot.append(writeLocalOpen(local + '_' + productName[-4:]))
+			finalRoot.append(writeLocalOpen(local + '_' + lastFewDigits))
 			combineRoots(finalRoot, productName, localss[local])
-			finalRoot.append(writeLocalClosed(local + '_' + productName[-4:]))
+			finalRoot.append(writeLocalClosed(local + '_' + lastFewDigits))
 
 		tree = ElementTree(finalRoot)
 		path = XMLSaveFolderPath + '/' + productName + '_Local_' + layer + '.XML'
@@ -162,7 +167,7 @@ def writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials, layer)
 	pyElement = SubElement(partElement, 'PlacementCoords-Y')
 	pyElement.text = str(y)
 	pAngleElement = SubElement(partElement, 'PlacementAngle')
-	pAngleElement.text = str(calcPartAngle(partInfo['Rotation'], fiducials[layer]['axesRotation']))
+	pAngleElement.text = str(calcPartAngle(math.radians(partInfo['Rotation']), fiducials[layer]['axesRotation']))
 	dieNameElement = SubElement(partElement, 'DieName')
 	dieNameElement.text = dieName
 
@@ -264,11 +269,11 @@ def calcPartAngle(ogAngle, axesRotationalAngle):
 			finalAngle: float
 				The new angle that a part points to in the new system in radian.
 	"""
-	
+
 	finalAngle = (ogAngle - axesRotationalAngle) % (2*math.pi)
 	if finalAngle > math.pi:
 		finalAngle = finalAngle - (2*math.pi)
-	return finalAngle
+	return -finalAngle
 
 def pointTranslation(p, p0, axesRotationalAngle):
 	"""Translate a point to a new coordinate in the new coordinate system. Note that the new coordinate is fliped. 
@@ -331,17 +336,19 @@ def pointTranslationTest():
 	print(pointTranslation((2, -2), (-2, -2), calcAxesRotaionalAngle((-2, -2), (-5, -5))))
 
 # if __name__ == '__main__':
-# 	import excel
-# 	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
-# 	e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
+# 	# import excel
+# 	# eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
+# 	# e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
 # 	# print(e)
 
-	# calcAxesRotaionalAngleTest()
-	# print('\n')
-	# calcPartAngleTest()
-	# print('\n')
-	# pointTranslationTest()
+# 	# calcAxesRotaionalAngleTest()
+# 	# print('\n')
+# 	# calcPartAngleTest()
+# 	# print('\n')
+# 	# pointTranslationTest()
+# 	print(calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973)),math.degrees(calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973))) ,'calcAxesRotaionalAngle')
 
+# 	print(calcPartAngle(math.pi*3/2, calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973))), math.degrees(calcPartAngle(math.pi*3/2, calcAxesRotaionalAngle((0.70663018,	1.15696974), (0.23344307, 0.80796973)))), 'calcPartAngle')
 
 
 	# local alignment angle???????????????????
