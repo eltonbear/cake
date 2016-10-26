@@ -1,6 +1,5 @@
 import os
 import re
-import os.path
 import math
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import ElementTree, Element, SubElement
@@ -69,7 +68,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 					if layer not in layersToLocalsToTipsToPartRootsDict:
 						layersToLocalsToTipsToPartRootsDict[layer] = {}
 					# Write a part element with given imformation
-					partE = writeLocalAlignmentPart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
+					partE = writeLocalAlignmentPart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials, layer)
 					createFakeRoot(layersToLocalsToTipsToPartRootsDict[layer], local, tipNumber, partE)
 				else:
 					partE = writePart(part, dieName, dieNameToTipAndCameraNumDict[dieName]['CameraNbr'], fiducials)
@@ -152,31 +151,24 @@ def combineRoots(root, productName, fakeRootsSortedWithTipNums):
 	for tipSize in sortedTipNumber:
 		root.extend(fakeRootsSortedWithTipNums[tipSize])
 
-def writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials):
+def writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials, layer):
 	enableElment = SubElement(partElement, 'Enabled')
 	enableElment.text = '1'
 	cameraNbrElement = SubElement(partElement, 'CameraNbr')
 	cameraNbrElement.text = cameraNbr
 	pxElement = SubElement(partElement, 'PlacementCoords-X')
-	if partInfo['Layer'] == 'L1' or partInfo['Layer'] == 'L2':
-		x, y = pointTranslation((partInfo['X-location'], partInfo['Y-location']), fiducials[partInfo['Layer']]['p1'],  fiducials[partInfo['Layer']]['axesRotation'])
-	else:
-		x, y = 0, 0
+	x, y = pointTranslation((partInfo['X-location'], partInfo['Y-location']), fiducials[layer]['p1'],  fiducials[layer]['axesRotation'])
 	pxElement.text = str(x)
 	pyElement = SubElement(partElement, 'PlacementCoords-Y')
 	pyElement.text = str(y)
 	pAngleElement = SubElement(partElement, 'PlacementAngle')
-	# Temp
-	if partInfo['Layer'] == 'L1' or partInfo['Layer'] == 'L2':
-		pAngleElement.text = str(calcPartAngle(partInfo['Rotation'], fiducials[partInfo['Layer']]['axesRotation']))
-	else:
-		pAngleElement.text = '0'
+	pAngleElement.text = str(calcPartAngle(partInfo['Rotation'], fiducials[layer]['axesRotation']))
 	dieNameElement = SubElement(partElement, 'DieName')
 	dieNameElement.text = dieName
 
 def writePart(partInfo, dieName, cameraNbr, fiducials):
 	partElement = Element('Rec_SubstratePlacement')
-	writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials)
+	writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials, partInfo['Layer'])
 	cameraHeightElement = SubElement(partElement, 'CameraHeight')
 	cameraHeightElement.text = '0'
 	pForceElement = SubElement(partElement, 'PlacementForce')
@@ -194,9 +186,9 @@ def writePart(partInfo, dieName, cameraNbr, fiducials):
 
 	return partElement
 
-def writeLocalAlignmentPart(partInfo, dieName, cameraNbr, fiducials):
+def writeLocalAlignmentPart(partInfo, dieName, cameraNbr, fiducials, layer):
 	partElement = Element('Rec_SubstratePlacement')	
-	writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials)
+	writePartCommon(partElement, partInfo, dieName, cameraNbr, fiducials, layer)
 	referenceNumberElement = SubElement(partElement, 'Comment')
 	referenceNumberElement.text = partInfo['Ref Des']
 
