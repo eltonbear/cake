@@ -65,6 +65,7 @@ class cakeApp(Tk):
 
 	def errorMessageWindow(self, message):
 		window = Tk()
+		window.minsize(width = 250, height = 0)
 		errorMessage(window, message)
 		window.mainloop()
 
@@ -157,7 +158,7 @@ class browse(Frame):
 		self.controller.closeWindow()
 
 	def toContinue(self):
-		
+
 		return self.continued
 
 	def getPath(self):

@@ -24,7 +24,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 	layersToTipsToPartRootsDict = {}		# {'layer':{'tip number': fake root}}
 	layersToLocalsToTipsToPartRootsDict = {}	# {'local1':{'tip number': fake root}, 'local2':{'tip number': fake root}}
 	dieNameToTipAndCameraNumDict= {}		# {'dieName': {'camera number': camNum, 'tip number': tipNum}}
-	missingDieFile = []                		# A list of missing die file names if there any
+	missingDieFile = set()             		# A set of missing die file names if there any
 	errorInFile = []						# A list of error messages when the process is run if there is any
 	error = False							# Starts with no errors
 	# Iterate through all parts dictionaries in the list
@@ -45,7 +45,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 				elif dieName + 'txt' in dieFileList:
 					dieFileName = dieName + '.txt'
 				else:
-					missingDieFile.append(dieName)
+					missingDieFile.add(dieName)
 					error = True
 				# If file path is found, access the file and get the tip number and camera number. Gives errors if there are exceptions parsing the xml file or finding the desire elements
 				if dieFileName:
@@ -104,7 +104,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 
 	# If there are any errors, return the error messaegs
 	if missingDieFile or errorInFile:
-		return {'missingDie': missingDieFile, 'error': errorInFile}
+		return {'missingDie': list(missingDieFile), 'error': errorInFile}
 	else:
 		return {}
 
