@@ -8,7 +8,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 	# Get the product name
 	productName = excelData['productName'].replace('-', '')
 	# Get last few digits of the product name
-	lastFewDigits = productName[-3:]
+	lastFewDigits = productName[-4:]
 	# Get a list of dictionaries of parts
 	parts = excelData['data']
 	# Get fiducials points
@@ -96,7 +96,7 @@ def writeXml(excelData, dieFolderPath, XMLSaveFolderPath):
 
 	
 	for layer, localss in layersToLocalsToTipsToPartRootsDict.items():
-		finalRoot = creatTemplate('Local', productName)
+		finalRoot = creatTemplate(layer, productName)
 		localKeys = sorted(localss.keys(), key = naturalKey)
 		for local in localKeys:
 			finalRoot.append(writeLocalOpen(local + '_' + lastFewDigits))
