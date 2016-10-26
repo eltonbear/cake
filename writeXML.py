@@ -330,11 +330,11 @@ def pointTranslationTest():
 	print(pointTranslation((2, -2), (5, 5), calcAxesRotaionalAngle((5, 5), (10, 10))))
 	print(pointTranslation((2, -2), (-2, -2), calcAxesRotaionalAngle((-2, -2), (-5, -5))))
 
-if __name__ == '__main__':
-	import excel
-	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
-	e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
-	# print(e)
+# if __name__ == '__main__':
+# 	import excel
+# 	eee = excel.readSheet(r'C:\Users\eltoshon\Desktop\cakeXMLfile\pico_top_expanded15.xlsx')
+# 	e = writeXml(eee, r'C:\Users\eltoshon\Desktop\Die', r'C:\Users\eltoshon\Desktop\cakeXMLfile')
+# 	# print(e)
 
 	# calcAxesRotaionalAngleTest()
 	# print('\n')

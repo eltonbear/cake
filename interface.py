@@ -80,7 +80,7 @@ class browse(Frame):
 		self.controller = controller
 		self.filePath = ""			# Final file path
 		self.filePathEntry = None	# File path in browse entry
-		self.isCancelled = False
+		self.continued = False
 		self.nextFrame = nextFrame
 		self.prevFrame = prevFrame
 		self.message = message
@@ -145,6 +145,7 @@ class browse(Frame):
 		elif not exists(self.filePath):
 			self.controller.popErrorMessage('Path does not exist!')
 		else:
+			self.continued = True
 			self.controller.showFrame(self.nextFrame)
 
 	def back(self):
@@ -153,11 +154,11 @@ class browse(Frame):
 		self.controller.showFrame(self.prevFrame)
 
 	def closeWindow(self):
-		self.isCancelled = True
 		self.controller.closeWindow()
 
 	def toContinue(self):
-		return not self.isCancelled
+		
+		return self.continued
 
 	def getPath(self):
 
@@ -236,6 +237,7 @@ class saveXML(browse):
 		if self.filePath == '':
 			self.controller.popErrorMessage('Please input file path!')
 		else:
+			self.continued = True
 			self.controller.closeWindow()
 
 	def getCheckBoxVal(self):
