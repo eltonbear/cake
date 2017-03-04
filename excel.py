@@ -1,16 +1,17 @@
-import pyexcel as pe
+import pyexcel
 import os
 import re
 
 def readSheet(filePath):
+	fileBaseName = os.path.basename(filePath)
 	try:
 		# Get workbook
-		book = pe.get_book(file_name=filePath) 
+		book = pyexcel.get_book(file_name=filePath) 
 		# Get sheet name in list
 		sheetName = book.sheet_names()
 		# error if there are more than 1 sheet in this book
 		if len(sheetName) > 1:
-			return {'error': 'There are more than one sheet.'}
+			return {'error': 'There are more than one sheet in ' + fileBaseName + '.'}
 
 	except NotImplementedError as error:
 		return {'error': 'No source found for ' + filePath}
@@ -89,9 +90,3 @@ def readSheet(filePath):
 			alignmentDictionaries[fidLayer] = {'p1': (fid1['X-location'], fid1['Y-location']), 'p2': (fid2['X-location'], fid2['Y-location'])}
 
 	return {'productName': productName, 'data': partsDictionaries, 'fiducials': alignmentDictionaries}
-
-
-
-
-
-

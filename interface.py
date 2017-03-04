@@ -168,7 +168,7 @@ class browse(Frame):
 class browseSheet(browse):
 
 	def __init__(self, parent, controller):
-		message = 'Select an Excelsheet (No .csv file)'
+		message = 'Select an Excel Workbook or .CSV'
 		browse.__init__(self, parent, controller, 'browseFolder', message = message)
 
 	def initGUI(self):
@@ -178,10 +178,11 @@ class browseSheet(browse):
 
 	def getFilePathToEntry(self):
 		fileType1 = ("Excel Workbook", "*.xlsx")
-		fileType2 = ("Excel Macro-Enabled Workbook", "*.xlsm")
-		fileType3 = ("All files", "*.*")
+		fileType2 = ("Comma Delimited", "*.csv")
+		fileType3 = ("Excel Macro-Enabled Workbook", "*.xlsm")
+		fileType4 = ("All files", "*.*")
 
-		path = askopenfilename(filetypes = (fileType1, fileType2, fileType3), parent = self.parent)
+		path = askopenfilename(filetypes = (fileType1, fileType2, fileType3, fileType4), parent = self.parent)
 
 		# Once self.filePath gets a filepath, delete what's in the entry and put self.filePath into the entry
 		if path != '':
