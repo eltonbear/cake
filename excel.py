@@ -67,20 +67,19 @@ def readSheet(filePath):
 		productName = productionInfo[0]
 		del partSheet.row[emptyRow]
 		del partSheet.row[productInfoR]
-		partsDictionaries = partSheet.to_records()
+		# partsDictionaries = partSheet.to_records()
+		partsAndFIDdictionaries = partSheet.to_records()
 		# alignmentDictsTemp = alignmentSheet.to_records()
 	except:
 		return {'error': 'File format incorrect: ' + filePath}
 
-	endOfPartsIndex = -1
-	isFID = False
-	for index in range(len(partsDictionaries)-1, -1, -1):
-		if index < len(partsDictionaries)-1:
-			if partsDictionaries[index + 1]['Ref Des'][:3] == 'FID' and partsDictionaries[index]['Ref Des'][:3] != 'FID':
-				endOfPartsIndex = index
-				break
-	alignmentDictsTemp = partsDictionaries[endOfPartsIndex + 1:len(partsDictionaries)]
-	partsDictionaries = partsDictionaries[0:endOfPartsIndex + 1]
+	partsDictionaries = []
+	alignmentDictsTemp = []
+	for part in partsAndFIDdictionaries:
+		if part['Ref Des'][:3] == 'FID':
+			alignmentDictsTemp.append(part)
+		else:
+			partsDictionaries.append(part)
 
 	alignmentDictionariesByLayer = {}
 
@@ -103,8 +102,8 @@ def readSheet(filePath):
 	
 	return {'productName': productName, 'data': partsDictionaries, 'fiducials': alignmentDictionaries}
 
-# if __name__ == "__main__":
-# 	x = readSheet(r'C:\Users\eltonbear\Desktop\pico_top_test.xlsx')
+if __name__ == "__main__":
+	x = readSheet(r'C:\Users\eltonbear\Desktop\pico_top_test.xlsx')
 
 
 
