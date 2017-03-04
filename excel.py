@@ -1,8 +1,8 @@
 import pyexcel as pe
 import os
+import re
 
 def readSheet(filePath):
-	
 	fileBaseName = os.path.basename(filePath)
 	fileName, fileExtension = os.path.splitext(fileBaseName) ############################################# FIRST SHEET NAME????????????/
 	if fileExtension == '.csv':
@@ -11,8 +11,8 @@ def readSheet(filePath):
 		# Get workbook that has two sheets
 		book = pe.get_book(file_name=filePath) 
 		
-		if 'Alignment' not in book.sheet_names():
-			return {'error': 'File: ' + filePath + ' missing "Alignment" worksheet.'}
+		# if 'Alignment' not in book.sheet_names():
+		# 	return {'error': 'File: ' + filePath + ' missing "Alignment" worksheet.'}
 		if fileName not in book.sheet_names():
 			return {'error': 'File: ' + filePath + ' missing "' + fileName + '" worksheet.'}
 
@@ -23,23 +23,23 @@ def readSheet(filePath):
 
 	partsTitleRow = 1
 	partSheet = book[fileName]
-	alignmentSheet = book['Alignment']
+	# alignmentSheet = book['Alignment']
 	partSheet.name_columns_by_row(partsTitleRow)
-	alignmentSheet.name_columns_by_row(0)
+	# alignmentSheet.name_columns_by_row(0)
 
 	partsTitleRow = -1
 	productInfoC = 0
 	productInfoR = 0
 	emptyRow = 1
 	requiredPartTitles = ['Ref Des', 'Part Number', 'X-location', 'Y-location', 'Rotation', 'Layer']
-	requriedAlignTitles = ['Layer',	'x1', 'y1', 'x2', 'y2']
+	# requriedAlignTitles = ['Layer',	'x1', 'y1', 'x2', 'y2']
 	partSheet.colnames = list(map(str.strip, partSheet.colnames))
-	alignmentSheet.colnames = list(map(str.strip, alignmentSheet.colnames))
+	# alignmentSheet.colnames = list(map(str.strip, alignmentSheet.colnames))
 	partTitles = partSheet.colnames
-	alignmentTitles = alignmentSheet.colnames
+	# alignmentTitles = alignmentSheet.colnames
 	emptyRowList = partSheet.row[emptyRow]
 	missingPartColumns = []
-	missingAlignColumns = []
+	# missingAlignColumns = []
 
 
 	# Check if required columns all exist for partSheet and alignment sheet
@@ -48,11 +48,11 @@ def readSheet(filePath):
 			missingPartColumns.append(requireTitle)
 	if missingPartColumns:	
 		return{'error': 'File missing column of "' + ','.join(missingPartColumns) + '" in parts sheet!'}
-	for requireTitle in requriedAlignTitles:
-		if requireTitle not in alignmentTitles:
-			missingAlignColumns.append(requireTitle)
-	if missingAlignColumns:	
-		return{'error': 'File missing column of "' + ','.join(missingAlignColumns) + '" in alignment sheet!'}
+	# for requireTitle in requriedAlignTitles:
+	# 	if requireTitle not in alignmentTitles:
+	# 		missingAlignColumns.append(requireTitle)
+	# if missingAlignColumns:	
+	# 	return{'error': 'File missing column of "' + ','.join(missingAlignColumns) + '" in alignment sheet!'}
 
 	# Check if the empty row in parts sheet is a list of strings
 	if not all(isinstance(e, str) for e in emptyRowList):
@@ -68,15 +68,44 @@ def readSheet(filePath):
 		del partSheet.row[emptyRow]
 		del partSheet.row[productInfoR]
 		partsDictionaries = partSheet.to_records()
-		alignmentDictsTemp = alignmentSheet.to_records()
+		# alignmentDictsTemp = alignmentSheet.to_records()
 	except:
 		return {'error': 'File format incorrect: ' + filePath}
 
-	alignmentDictionaries = {}
-	for alignDict in alignmentDictsTemp:
-		alignmentDictionaries[alignDict['Layer']] = {'p1': (alignDict['x1'], alignDict['y1']), 'p2': (alignDict['x2'], alignDict['y2'])}
+	endOfPartsIndex = -1
+	isFID = False
+	for index in range(len(partsDictionaries)-1, -1, -1):
+		if index < len(partsDictionaries)-1:
+			if partsDictionaries[index + 1]['Ref Des'][:3] == 'FID' and partsDictionaries[index]['Ref Des'][:3] != 'FID':
+				endOfPartsIndex = index
+				break
+	alignmentDictsTemp = partsDictionaries[endOfPartsIndex + 1:len(partsDictionaries)]
+	partsDictionaries = partsDictionaries[0:endOfPartsIndex + 1]
 
+	alignmentDictionariesByLayer = {}
+
+	for fidDict in alignmentDictsTemp:
+		if fidDict['Layer'] not in  alignmentDictionariesByLayer:
+			alignmentDictionariesByLayer[fidDict['Layer']] = [fidDict]
+		else:
+			alignmentDictionariesByLayer[fidDict['Layer']].append(fidDict)
+
+	alignmentDictionaries = {}		
+	for fidLayer in alignmentDictionariesByLayer:
+		fid1 = alignmentDictionariesByLayer[fidLayer][0]
+		fid2 = alignmentDictionariesByLayer[fidLayer][1]
+		FIDname1 = fid1['Ref Des']
+		FIDname2 = fid2['Ref Des']
+		if int(re.findall(r'\d+',FIDname1)[0]) > int(re.findall(r'\d+',FIDname2)[0]):
+			alignmentDictionaries[fidLayer] = {'p1': (fid2['X-location'], fid2['Y-location']), 'p2': (fid1['X-location'], fid1['Y-location'])}
+		else:
+			alignmentDictionaries[fidLayer] = {'p1': (fid1['X-location'], fid1['Y-location']), 'p2': (fid2['X-location'], fid2['Y-location'])}
+	
 	return {'productName': productName, 'data': partsDictionaries, 'fiducials': alignmentDictionaries}
+
+# if __name__ == "__main__":
+# 	x = readSheet(r'C:\Users\eltonbear\Desktop\pico_top_test.xlsx')
+
 
 
 
