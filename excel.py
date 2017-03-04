@@ -73,6 +73,7 @@ def readSheet(filePath):
 	except:
 		return {'error': 'File format incorrect: ' + filePath}
 
+	# Separate parts and FIDs into 2 lists
 	partsDictionaries = []
 	alignmentDictsTemp = []
 	for part in partsAndFIDdictionaries:
@@ -81,16 +82,20 @@ def readSheet(filePath):
 		else:
 			partsDictionaries.append(part)
 
+	# Separate FIDs by layers --> {'L1': [D1, D2], 'L2':[D1 D2], ....}, D1 = {'Ref Des': 'FID#', .............} 
 	alignmentDictionariesByLayer = {}
-
 	for fidDict in alignmentDictsTemp:
 		if fidDict['Layer'] not in  alignmentDictionariesByLayer:
 			alignmentDictionariesByLayer[fidDict['Layer']] = [fidDict]
 		else:
 			alignmentDictionariesByLayer[fidDict['Layer']].append(fidDict)
 
+	# Rerrange alignment fid pattern
 	alignmentDictionaries = {}		
 	for fidLayer in alignmentDictionariesByLayer:
+		# Check the number of fid per layer
+		if len(alignmentDictionariesByLayer[fidLayer]) != 2:
+			return {'error': 'The number of fiducial incorrect in layer: ' + fidLayer}
 		fid1 = alignmentDictionariesByLayer[fidLayer][0]
 		fid2 = alignmentDictionariesByLayer[fidLayer][1]
 		FIDname1 = fid1['Ref Des']
